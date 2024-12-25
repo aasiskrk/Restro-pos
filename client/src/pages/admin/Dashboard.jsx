@@ -10,6 +10,7 @@ import {
     CubeIcon,
     Cog6ToothIcon
 } from '@heroicons/react/24/outline';
+import { ChartBarIcon as ChartBarIconSolid } from '@heroicons/react/24/solid';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 
 const navigation = [
@@ -69,16 +70,33 @@ const staffPerformance = [
 export default function Dashboard() {
     return (
         <DashboardLayout navigation={navigation}>
-            <div className="py-6">
+            <div className="px-4 sm:px-6 lg:px-8 py-8">
+                {/* Header Section */}
+                <div className="sm:flex sm:items-center">
+                    <div className="sm:flex-auto">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-orange-100 p-2 rounded-lg">
+                                <ChartBarIconSolid className="h-6 w-6 text-orange-600" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+                                <p className="mt-2 text-sm text-gray-700">
+                                    Welcome back! Here's what's happening today.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {statsCards.map((stat) => (
                         <motion.div
                             key={stat.title}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5 }}
-                            className="rounded-lg bg-white p-6 shadow-sm"
+                            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
                         >
                             <div className="flex items-center justify-between">
                                 <div>
@@ -93,7 +111,7 @@ export default function Dashboard() {
                                         <p className="mt-2 text-sm text-gray-500">{stat.subtext}</p>
                                     )}
                                 </div>
-                                <div className={`rounded-md p-3 ${stat.changeType === 'warning' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'}`}>
+                                <div className={`rounded-lg p-3 ${stat.changeType === 'warning' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'}`}>
                                     <stat.icon className="h-6 w-6" />
                                 </div>
                             </div>
@@ -104,8 +122,8 @@ export default function Dashboard() {
                 {/* Main Content Grid */}
                 <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
                     {/* Sales Overview */}
-                    <div className="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 className="text-lg font-medium text-gray-900">Sales Overview</h3>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 className="text-lg font-semibold text-gray-900">Sales Overview</h3>
                         {/* Add your chart component here */}
                         <div className="h-80 mt-4">
                             {/* Placeholder for chart */}
@@ -114,8 +132,8 @@ export default function Dashboard() {
                     </div>
 
                     {/* Popular Items */}
-                    <div className="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 className="text-lg font-medium text-gray-900">Popular Items</h3>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 className="text-lg font-semibold text-gray-900">Popular Items</h3>
                         <div className="mt-4 space-y-4">
                             {popularItems.map((item) => (
                                 <div key={item.name} className="flex items-center justify-between">
@@ -132,19 +150,21 @@ export default function Dashboard() {
                     </div>
 
                     {/* Recent Orders */}
-                    <div className="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 className="text-lg font-medium text-gray-900">Recent Orders</h3>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
                         <div className="mt-4 space-y-4">
                             {recentOrders.map((order) => (
-                                <div key={order.id} className="flex items-center justify-between border-b pb-4">
+                                <div key={order.id} className="flex items-center justify-between border-b border-gray-100 pb-4">
                                     <div>
                                         <div className="flex items-center gap-3">
-                                            <span className="text-orange-600">#{order.id}</span>
+                                            <span className="text-orange-600 font-medium">#{order.id}</span>
                                             <span className="font-medium">{order.table}</span>
                                         </div>
                                         <p className="text-sm text-gray-500">{order.items} items • {order.amount}</p>
                                     </div>
-                                    <span className={`rounded-full px-3 py-1 text-sm ${order.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status === 'Completed'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-yellow-100 text-yellow-800'
                                         }`}>
                                         {order.status}
                                     </span>
@@ -154,16 +174,16 @@ export default function Dashboard() {
                     </div>
 
                     {/* Staff Performance */}
-                    <div className="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 className="text-lg font-medium text-gray-900">Staff Performance</h3>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 className="text-lg font-semibold text-gray-900">Staff Performance</h3>
                         <div className="mt-4 space-y-4">
                             {staffPerformance.map((staff) => (
                                 <div key={staff.name} className="flex items-center gap-4">
-                                    <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                                        <span className="text-sm font-medium">{staff.avatar}</span>
+                                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                        <span className="text-sm font-medium text-orange-600">{staff.avatar}</span>
                                     </div>
                                     <div className="flex-1">
-                                        <p className="font-medium">{staff.name}</p>
+                                        <p className="font-medium text-gray-900">{staff.name}</p>
                                         <div className="mt-1 h-2 w-full rounded-full bg-gray-100">
                                             <div
                                                 className="h-2 rounded-full bg-orange-500"
@@ -171,7 +191,7 @@ export default function Dashboard() {
                                             />
                                         </div>
                                     </div>
-                                    <span className="text-sm font-medium">{staff.performance}%</span>
+                                    <span className="text-sm font-medium text-gray-900">{staff.performance}%</span>
                                 </div>
                             ))}
                         </div>

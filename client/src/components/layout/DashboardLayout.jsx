@@ -3,14 +3,29 @@ import { Link, useLocation } from 'react-router-dom';
 import Header from '../admin/Header';
 import { motion } from 'framer-motion';
 import logo from '../../assets/frame.svg';
+import { ChartBarIcon, UsersIcon, ClipboardDocumentListIcon, TableCellsIcon, CubeIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
-export default function DashboardLayout({ children, navigation }) {
+const defaultNavigation = [
+    { name: 'Dashboard', icon: ChartBarIcon, href: '/admin', current: false },
+    { name: 'Staff Management', icon: UsersIcon, href: '/admin/staff', current: false },
+    { name: 'Menu Management', icon: ClipboardDocumentListIcon, href: '/admin/menu', current: false },
+    { name: 'Orders & Tables', icon: TableCellsIcon, href: '/admin/orders', current: false },
+    { name: 'Inventory', icon: CubeIcon, href: '/admin/inventory', current: false },
+    { name: 'Settings', icon: Cog6ToothIcon, href: '/admin/settings', current: false },
+];
+
+export default function DashboardLayout({ children, navigation = defaultNavigation }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const location = useLocation();
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
+
+    const updatedNavigation = navigation.map(item => ({
+        ...item,
+        current: location.pathname === item.href
+    }));
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -43,15 +58,14 @@ export default function DashboardLayout({ children, navigation }) {
                         </div>
                         <div className="mt-5 flex flex-grow flex-col">
                             <nav className="flex-1 space-y-1 px-2 pb-4">
-                                {navigation.map((item) => {
-                                    const isActive = location.pathname === item.href;
+                                {updatedNavigation.map((item) => {
                                     return (
                                         <Link
                                             key={item.name}
                                             to={item.href}
                                             className={`
                                                 group flex items-center rounded-md px-2 py-2 text-sm font-medium
-                                                ${isActive
+                                                ${item.current
                                                     ? 'bg-orange-50 text-orange-600'
                                                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                                 }
@@ -64,7 +78,7 @@ export default function DashboardLayout({ children, navigation }) {
                                                 whileTap={{ scale: 0.95 }}
                                             >
                                                 <item.icon
-                                                    className={`h-6 w-6 flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                    className={`h-6 w-6 flex-shrink-0 transition-colors duration-200 ${item.current ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-500'
                                                         }`}
                                                     aria-hidden="true"
                                                 />
