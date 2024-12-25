@@ -14,10 +14,11 @@ import {
     CubeIcon,
     Cog6ToothIcon,
     UserCircleIcon,
+    ClockIcon,
 } from '@heroicons/react/24/outline';
 import { UsersIcon as UsersIconSolid } from '@heroicons/react/24/solid';
 import { Dialog, Transition } from '@headlessui/react';
-import { Input, Select } from '../../components/common/Form';
+import { Input, Select, Button } from '../../components/common/Form';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 
 const staffStatusColors = {
@@ -34,6 +35,40 @@ const navigation = [
     { name: 'Orders & Tables', icon: TableCellsIcon, href: '/admin/orders', current: false },
     { name: 'Inventory', icon: CubeIcon, href: '/admin/inventory', current: false },
     { name: 'Settings', icon: Cog6ToothIcon, href: '/admin/settings', current: false },
+];
+
+// Add staff history data
+const staffHistory = [
+    {
+        id: 1,
+        staffId: 'ST001',
+        name: 'John Doe',
+        role: 'Head Chef',
+        clockIn: '2024-03-15 08:45 AM',
+        clockOut: '2024-03-15 05:15 PM',
+        totalHours: '8.5',
+        status: 'completed'
+    },
+    {
+        id: 2,
+        staffId: 'ST002',
+        name: 'Jane Smith',
+        role: 'Server',
+        clockIn: '2024-03-15 09:00 AM',
+        clockOut: null,
+        totalHours: null,
+        status: 'active'
+    },
+    {
+        id: 3,
+        staffId: 'ST003',
+        name: 'Mike Johnson',
+        role: 'Sous Chef',
+        clockIn: '2024-03-15 07:30 AM',
+        clockOut: '2024-03-15 03:45 PM',
+        totalHours: '8.25',
+        status: 'completed'
+    }
 ];
 
 export default function StaffManagement() {
@@ -244,134 +279,127 @@ export default function StaffManagement() {
                             </div>
                         </div>
                     </div>
-                    <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex items-center gap-4">
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setShowAddStaff(true)}
-                            className="inline-flex items-center justify-center rounded-md border border-transparent bg-orange-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 sm:w-auto"
-                        >
+                    <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+                        <Button onClick={() => setShowAddStaff(true)}>
                             <PlusIcon className="h-4 w-4 mr-2" />
                             Add Staff
-                        </motion.button>
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="rounded-md border-gray-300 py-2 pl-3 pr-10 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-                        >
-                            <option value="name">Sort by Name</option>
-                            <option value="role">Sort by Role</option>
-                            <option value="salary">Sort by Salary</option>
-                        </select>
+                        </Button>
                     </div>
                 </div>
 
                 {/* Tab Buttons */}
-                <div className="mt-6 flex gap-4">
-                    <button
-                        onClick={() => setActiveTab('list')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md ${activeTab === 'list'
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                            }`}
-                    >
-                        Staff List
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('attendance')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md ${activeTab === 'attendance'
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                            }`}
-                    >
-                        Attendance
-                    </button>
+                <div className="mt-6 border-b border-gray-200">
+                    <nav className="flex gap-4" aria-label="Tabs">
+                        <button
+                            onClick={() => setActiveTab('list')}
+                            className={`${activeTab === 'list'
+                                    ? 'border-orange-500 text-orange-600'
+                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
+                        >
+                            Staff List
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('attendance')}
+                            className={`${activeTab === 'attendance'
+                                    ? 'border-orange-500 text-orange-600'
+                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
+                        >
+                            Attendance
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`${activeTab === 'history'
+                                    ? 'border-orange-500 text-orange-600'
+                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
+                        >
+                            Clock History
+                        </button>
+                    </nav>
                 </div>
 
                 {/* Staff List Table */}
                 {activeTab === 'list' && (
-                    <div className="mt-8 flex flex-col">
-                        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                            <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-                                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                                    <table className="min-w-full divide-y divide-gray-300">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
-                                                    ID & Staff Details
-                                                </th>
-                                                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                                    Email
-                                                </th>
-                                                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                                    Age
-                                                </th>
-                                                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                                    Salary
-                                                </th>
-                                                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                                    Timing
-                                                </th>
-                                                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                                    Actions
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200 bg-white">
-                                            {staffList.map((staff) => (
-                                                <tr key={staff.id}>
-                                                    <td className="whitespace-nowrap py-4 pl-4 pr-3">
-                                                        <div className="flex items-center">
-                                                            <img
-                                                                className="h-10 w-10 rounded-full"
-                                                                src={staff.image}
-                                                                alt=""
-                                                            />
-                                                            <div className="ml-4">
-                                                                <div className="font-medium text-gray-900">
-                                                                    {staff.name}
-                                                                </div>
-                                                                <div className="text-gray-500">{staff.role}</div>
-                                                            </div>
+                    <div className="mt-8">
+                        <div className="overflow-hidden bg-white rounded-xl shadow-sm border border-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+                                            ID & Staff Details
+                                        </th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Email
+                                        </th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Age
+                                        </th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Salary
+                                        </th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Timing
+                                        </th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 bg-white">
+                                    {staffList.map((staff) => (
+                                        <tr key={staff.id}>
+                                            <td className="whitespace-nowrap py-4 pl-4 pr-3">
+                                                <div className="flex items-center">
+                                                    <img
+                                                        className="h-10 w-10 rounded-full"
+                                                        src={staff.image}
+                                                        alt=""
+                                                    />
+                                                    <div className="ml-4">
+                                                        <div className="font-medium text-gray-900">
+                                                            {staff.name}
                                                         </div>
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                        {staff.email}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                        {staff.age}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                        {staff.salary}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                        {staff.timing}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-3 py-4 text-sm">
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                className="text-blue-600 hover:text-blue-900"
-                                                                onClick={() => {
-                                                                    setSelectedStaff(staff);
-                                                                    setShowViewStaff(true);
-                                                                }}
-                                                            >
-                                                                <EyeIcon className="h-5 w-5" />
-                                                            </button>
-                                                            <button className="text-orange-600 hover:text-orange-900">
-                                                                <PencilSquareIcon className="h-5 w-5" />
-                                                            </button>
-                                                            <button className="text-red-600 hover:text-red-900">
-                                                                <TrashIcon className="h-5 w-5" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                                                        <div className="text-gray-500">{staff.role}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {staff.email}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {staff.age}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {staff.salary}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {staff.timing}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        className="text-blue-600 hover:text-blue-900"
+                                                        onClick={() => {
+                                                            setSelectedStaff(staff);
+                                                            setShowViewStaff(true);
+                                                        }}
+                                                    >
+                                                        <EyeIcon className="h-5 w-5" />
+                                                    </button>
+                                                    <button className="text-orange-600 hover:text-orange-900">
+                                                        <PencilSquareIcon className="h-5 w-5" />
+                                                    </button>
+                                                    <button className="text-red-600 hover:text-red-900">
+                                                        <TrashIcon className="h-5 w-5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 )}
@@ -379,81 +407,138 @@ export default function StaffManagement() {
                 {/* Attendance List */}
                 {activeTab === 'attendance' && (
                     <div className="mt-8">
-                        <div className="mt-4 flex flex-col">
-                            <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                                <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-                                    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                                        <table className="min-w-full divide-y divide-gray-300">
-                                            <thead className="bg-gray-50">
-                                                <tr>
-                                                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
-                                                        ID & Staff Details
-                                                    </th>
-                                                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                                        Date
-                                                    </th>
-                                                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                                        Timing
-                                                    </th>
-                                                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                                        Status
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-200 bg-white">
-                                                {attendanceList.map((record) => (
-                                                    <tr key={`${record.id}-${record.date}`}>
-                                                        <td className="whitespace-nowrap py-4 pl-4 pr-3">
-                                                            <div className="flex items-center">
-                                                                <div>
-                                                                    <div className="font-medium text-gray-900">
-                                                                        {record.name}
-                                                                    </div>
-                                                                    <div className="text-gray-500">{record.role}</div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                            {record.date}
-                                                        </td>
-                                                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                            {record.timing}
-                                                        </td>
-                                                        <td className="whitespace-nowrap px-3 py-4 text-sm">
-                                                            <div className="flex gap-2">
-                                                                {Object.entries(staffStatusColors).map(([status, colorClass]) => (
-                                                                    <button
-                                                                        key={status}
-                                                                        onClick={() => setSelectedStatus(selectedStatus === status ? null : status)}
-                                                                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold 
-                                                                            ${selectedStatus && selectedStatus !== status ? 'hidden' : ''} 
-                                                                            ${status === record.status ? colorClass : 'bg-gray-100 text-gray-800'}
-                                                                            transition-all duration-200 ease-in-out
-                                                                            hover:ring-2 hover:ring-offset-1 hover:ring-orange-500
-                                                                        `}
-                                                                    >
-                                                                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                                                                        {status === record.status && selectedStatus === status && (
-                                                                            <PencilSquareIcon
-                                                                                className="h-3.5 w-3.5 ml-1.5 cursor-pointer"
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    // Add your edit logic here
-                                                                                    console.log('Edit status for:', record.id);
-                                                                                }}
-                                                                            />
-                                                                        )}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="overflow-hidden bg-white rounded-xl shadow-sm border border-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+                                            ID & Staff Details
+                                        </th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Date
+                                        </th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Timing
+                                        </th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Status
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 bg-white">
+                                    {attendanceList.map((record) => (
+                                        <tr key={`${record.id}-${record.date}`}>
+                                            <td className="whitespace-nowrap py-4 pl-4 pr-3">
+                                                <div className="flex items-center">
+                                                    <div>
+                                                        <div className="font-medium text-gray-900">
+                                                            {record.name}
+                                                        </div>
+                                                        <div className="text-gray-500">{record.role}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {record.date}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {record.timing}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                                <div className="flex gap-2">
+                                                    {Object.entries(staffStatusColors).map(([status, colorClass]) => (
+                                                        <button
+                                                            key={status}
+                                                            onClick={() => setSelectedStatus(selectedStatus === status ? null : status)}
+                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold 
+                                                                ${selectedStatus && selectedStatus !== status ? 'hidden' : ''} 
+                                                                ${status === record.status ? colorClass : 'bg-gray-100 text-gray-800'}
+                                                                transition-all duration-200 ease-in-out
+                                                                hover:ring-2 hover:ring-offset-1 hover:ring-orange-500
+                                                            `}
+                                                        >
+                                                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                                                            {status === record.status && selectedStatus === status && (
+                                                                <PencilSquareIcon
+                                                                    className="h-3.5 w-3.5 ml-1.5 cursor-pointer"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        // Add your edit logic here
+                                                                        console.log('Edit status for:', record.id);
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Clock History */}
+                {activeTab === 'history' && (
+                    <div className="mt-8">
+                        <div className="overflow-hidden bg-white rounded-xl shadow-sm border border-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Staff Details
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Clock In
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Clock Out
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Total Hours
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 bg-white">
+                                    {staffHistory.map((record) => (
+                                        <tr key={record.id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                                        <ClockIcon className="h-5 w-5 text-orange-600" />
+                                                    </div>
+                                                    <div className="ml-4">
+                                                        <div className="text-sm font-medium text-gray-900">{record.name}</div>
+                                                        <div className="text-sm text-gray-500">{record.role}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {record.clockIn}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {record.clockOut || 'Still Working'}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {record.totalHours ? `${record.totalHours} hrs` : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${record.status === 'completed'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-blue-100 text-blue-800'
+                                                    }`}>
+                                                    {record.status === 'completed' ? 'Completed' : 'Active'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 )}
