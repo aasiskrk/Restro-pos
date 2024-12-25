@@ -5,6 +5,7 @@ import Dashboard from './pages/admin/Dashboard';
 import StaffManagement from './pages/admin/StaffManagement';
 import MenuManagement from './pages/admin/MenuManagement';
 import OrdersAndTables from './pages/admin/OrdersAndTables';
+import Inventory from './pages/admin/Inventory';
 import ServerInterface from './pages/server/ServerInterface';
 import CashierInterface from './pages/cashier/CashierInterface';
 import KitchenInterface from './pages/kitchen/KitchenInterface';
@@ -24,6 +25,7 @@ function App() {
         <Route path="/admin/staff" element={<StaffManagement />} />
         <Route path="/admin/menu" element={<MenuManagement />} />
         <Route path="/admin/orders" element={<OrdersAndTables />} />
+        <Route path="/admin/inventory" element={<Inventory />} />
 
         {/* Role-based Routes */}
         <Route path="/server" element={<ServerInterface />} />
