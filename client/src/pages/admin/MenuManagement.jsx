@@ -563,12 +563,24 @@ export default function MenuManagement() {
         <DashboardLayout navigation={navigation}>
             <div className="px-4 sm:px-6 lg:px-8 py-8">
                 {/* Header Section */}
-                <div className="sm:flex sm:items-center justify-between">
-                    <h1 className="text-2xl font-semibold text-gray-900">Menu Management</h1>
-                    <div className="flex gap-3">
+                <div className="sm:flex sm:items-center">
+                    <div className="sm:flex-auto">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-orange-100 p-2 rounded-lg">
+                                <ClipboardDocumentListIconSolid className="h-6 w-6 text-orange-600" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-semibold text-gray-900">Menu Management</h1>
+                                <p className="mt-2 text-sm text-gray-700">
+                                    Total Items: <span className="font-medium">{menuItems.length}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex gap-3">
                         <Button
-                            onClick={() => setShowAddCategory(true)}
                             variant="secondary"
+                            onClick={() => setShowAddCategory(true)}
                         >
                             <PlusIcon className="h-4 w-4 mr-2" />
                             Add Category
@@ -600,19 +612,20 @@ export default function MenuManagement() {
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => setSelectedCategory(category.id)}
-                                        className={`relative w-full flex flex-col items-center justify-center p-6 rounded-2xl
-                                            transition-all duration-200 gap-3
+                                        className={`relative w-full flex flex-col items-center justify-center p-6 rounded-xl
+                                            transition-all duration-200 gap-3 border
                                             ${selectedCategory === category.id
-                                                ? 'bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg shadow-orange-500/20'
-                                                : 'bg-white hover:bg-gray-50 border border-gray-200'}`}
+                                                ? 'bg-orange-50 border-orange-200 shadow-sm'
+                                                : 'bg-white hover:bg-gray-50 border-gray-200'}`}
                                     >
-                                        <Icon className={`h-6 w-6 ${selectedCategory === category.id ? 'text-white' : 'text-gray-600'
+                                        <Icon className={`h-6 w-6 ${selectedCategory === category.id ? 'text-orange-600' : 'text-gray-600'
                                             }`} />
                                         <div className="text-center">
-                                            <span className={`text-sm font-medium ${selectedCategory === category.id ? 'text-white' : 'text-gray-900'
+                                            <span className={`text-sm font-medium ${selectedCategory === category.id ? 'text-orange-900' : 'text-gray-900'
                                                 }`}>
                                                 {category.name}
                                             </span>
+                                            <p className="mt-1 text-xs text-gray-500">{category.items} items</p>
                                         </div>
                                     </motion.button>
                                     <CategoryMenu
@@ -627,23 +640,23 @@ export default function MenuManagement() {
 
                 {/* Menu Items List */}
                 <div className="mt-8">
-                    <div className="overflow-hidden bg-white rounded-2xl border border-gray-200">
+                    <div className="overflow-hidden bg-white rounded-xl shadow-sm border border-gray-200">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Item & Description
                                     </th>
-                                    <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Category
                                     </th>
-                                    <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Stock
                                     </th>
-                                    <th scope="col" className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Price
                                     </th>
-                                    <th scope="col" className="relative px-6 py-4">
+                                    <th scope="col" className="relative px-6 py-3">
                                         <span className="sr-only">Actions</span>
                                     </th>
                                 </tr>
@@ -662,7 +675,7 @@ export default function MenuManagement() {
                                                 <img
                                                     src={item.image}
                                                     alt={item.name}
-                                                    className="h-12 w-12 rounded-xl object-cover"
+                                                    className="h-12 w-12 rounded-lg object-cover"
                                                 />
                                                 <div className="ml-4">
                                                     <div className="font-medium text-gray-900">{item.name}</div>
