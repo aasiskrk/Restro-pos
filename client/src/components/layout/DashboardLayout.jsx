@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Header from '../admin/Header';
 import { motion } from 'framer-motion';
@@ -15,8 +15,15 @@ const defaultNavigation = [
 ];
 
 export default function DashboardLayout({ children, navigation = defaultNavigation }) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+        const saved = localStorage.getItem('sidebarState');
+        return saved ? JSON.parse(saved) : true;
+    });
     const location = useLocation();
+
+    useEffect(() => {
+        localStorage.setItem('sidebarState', JSON.stringify(isSidebarOpen));
+    }, [isSidebarOpen]);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -32,7 +39,7 @@ export default function DashboardLayout({ children, navigation = defaultNavigati
             <div className="flex min-h-screen">
                 {/* Sidebar with transition */}
                 <div
-                    className={`${isSidebarOpen ? 'w-64' : 'w-20'
+                    className={`${isSidebarOpen ? 'w-64' : 'w-16'
                         } hidden md:flex md:flex-col transition-all duration-300 ease-in-out`}
                 >
                     <div className="flex flex-grow flex-col overflow-y-auto border-r border-gray-200 bg-white pt-5">
@@ -69,7 +76,7 @@ export default function DashboardLayout({ children, navigation = defaultNavigati
                                                     ? 'bg-orange-50 text-orange-600'
                                                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                                 }
-                                                ${!isSidebarOpen && 'justify-center'}
+                                                ${!isSidebarOpen ? 'justify-center' : ''}
                                             `}
                                             title={!isSidebarOpen ? item.name : ''}
                                         >
