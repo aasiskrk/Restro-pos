@@ -293,8 +293,8 @@ export default function StaffManagement() {
                         <button
                             onClick={() => setActiveTab('list')}
                             className={`${activeTab === 'list'
-                                    ? 'border-orange-500 text-orange-600'
-                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                ? 'border-orange-500 text-orange-600'
+                                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                 } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
                         >
                             Staff List
@@ -302,8 +302,8 @@ export default function StaffManagement() {
                         <button
                             onClick={() => setActiveTab('attendance')}
                             className={`${activeTab === 'attendance'
-                                    ? 'border-orange-500 text-orange-600'
-                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                ? 'border-orange-500 text-orange-600'
+                                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                 } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
                         >
                             Attendance
@@ -311,8 +311,8 @@ export default function StaffManagement() {
                         <button
                             onClick={() => setActiveTab('history')}
                             className={`${activeTab === 'history'
-                                    ? 'border-orange-500 text-orange-600'
-                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                ? 'border-orange-500 text-orange-600'
+                                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                 } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
                         >
                             Clock History
@@ -529,8 +529,8 @@ export default function StaffManagement() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${record.status === 'completed'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-blue-100 text-blue-800'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : 'bg-blue-100 text-blue-800'
                                                     }`}>
                                                     {record.status === 'completed' ? 'Completed' : 'Active'}
                                                 </span>
