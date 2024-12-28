@@ -6,7 +6,7 @@ import {
     MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import { BellAlertIcon as BellAlertIconSolid } from '@heroicons/react/24/solid';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import DashboardLayout from '../../components/admin/DashboardLayout';
 
 const navigation = [
     { name: 'Kitchen Display', icon: TableCellsIcon, href: '/kitchen', current: false },

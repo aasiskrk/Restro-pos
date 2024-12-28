@@ -10,7 +10,7 @@ import {
     XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { TableCellsIcon as TableCellsIconSolid } from '@heroicons/react/24/solid';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import DashboardLayout from '../../components/admin/DashboardLayout';
 import { Button } from '../../components/common/Form';
 
 const navigation = [
@@ -76,26 +76,27 @@ function ViewOrderModal({ isOpen, onClose, tableId }) {
             total: 16.97
         }
     ]);
+    const [editingOrder, setEditingOrder] = useState(null);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-    const handleStatusUpdate = (orderId, itemId) => {
+    const handleModifyOrder = (orderId) => {
+        const orderToEdit = orders.find(order => order.id === orderId);
+        if (orderToEdit && orderToEdit.status !== 'Completed') {
+            setEditingOrder(orderToEdit);
+            setShowAddItems(true);
+        }
+    };
+
+    const handleCancelOrder = (orderId) => {
         setOrders(prevOrders =>
             prevOrders.map(order => {
                 if (order.id === orderId) {
-                    const allItemsCompleted = order.items.every(item =>
-                        item.id === itemId ? true : item.status === 'completed'
-                    );
-
-                    return {
-                        ...order,
-                        status: allItemsCompleted ? 'Completed' : 'In Progress',
-                        items: order.items.map(item =>
-                            item.id === itemId ? { ...item, status: 'completed' } : item
-                        )
-                    };
+                    return { ...order, status: 'Cancelled' };
                 }
                 return order;
             })
         );
+        setShowCancelConfirm(false);
     };
 
     const getStatusBadgeColor = (status) => {
@@ -210,6 +211,24 @@ function ViewOrderModal({ isOpen, onClose, tableId }) {
                                                         <span>${order.total.toFixed(2)}</span>
                                                     </div>
                                                 </div>
+                                                <div className="flex items-center gap-2">
+                                                    {order.status !== 'Completed' && order.status !== 'Cancelled' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleModifyOrder(order.id)}
+                                                                className="px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800 hover:bg-orange-200"
+                                                            >
+                                                                Modify Order
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setShowCancelConfirm(order.id)}
+                                                                className="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 hover:bg-red-200"
+                                                            >
+                                                                Cancel Order
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </motion.div>
                                         ))}
                                     </div>
@@ -232,24 +251,60 @@ function ViewOrderModal({ isOpen, onClose, tableId }) {
                             </div>
                         </div>
                     </motion.div>
+
+                    {/* Cancel Confirmation Modal */}
+                    {showCancelConfirm && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowCancelConfirm(false)} />
+                            <div className="relative bg-white rounded-lg p-6 w-full max-w-md">
+                                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                                    Cancel Order
+                                </h3>
+                                <p className="text-gray-500 mb-4">
+                                    Are you sure you want to cancel this order? This action cannot be undone.
+                                </p>
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        onClick={() => setShowCancelConfirm(false)}
+                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                                    >
+                                        No, Keep Order
+                                    </button>
+                                    <button
+                                        onClick={() => handleCancelOrder(showCancelConfirm)}
+                                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                                    >
+                                        Yes, Cancel Order
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Add Items Panel */}
+                    <TakeOrderPanel
+                        isOpen={showAddItems}
+                        onClose={() => {
+                            setShowAddItems(false);
+                            setEditingOrder(null);
+                        }}
+                        tableId={tableId}
+                        isAdditionalOrder
+                        existingOrder={editingOrder}
+                    />
                 </>
             )}
-
-            {/* Add Items Panel */}
-            <TakeOrderPanel
-                isOpen={showAddItems}
-                onClose={() => setShowAddItems(false)}
-                tableId={tableId}
-                isAdditionalOrder
-            />
         </AnimatePresence>
     );
 }
 
-function TakeOrderPanel({ isOpen, onClose, tableId, isAdditionalOrder = false }) {
+function TakeOrderPanel({ isOpen, onClose, tableId, isAdditionalOrder = false, existingOrder }) {
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [currentOrder, setCurrentOrder] = useState([]);
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [cookingInstructions, setCookingInstructions] = useState('');
+    const [showInstructionsModal, setShowInstructionsModal] = useState(false);
 
     // Mock categories data
     const categories = [
@@ -280,16 +335,33 @@ function TakeOrderPanel({ isOpen, onClose, tableId, isAdditionalOrder = false })
     ];
 
     const handleAddToOrder = (item) => {
-        const existingItem = currentOrder.find(orderItem => orderItem.id === item.id);
+        setSelectedItem(item);
+        setShowInstructionsModal(true);
+    };
+
+    const handleConfirmAddToOrder = () => {
+        const existingItem = currentOrder.find(orderItem =>
+            orderItem.id === selectedItem.id &&
+            orderItem.cookingInstructions === cookingInstructions
+        );
+
         if (existingItem) {
             setCurrentOrder(currentOrder.map(orderItem =>
-                orderItem.id === item.id
+                orderItem.id === selectedItem.id && orderItem.cookingInstructions === cookingInstructions
                     ? { ...orderItem, quantity: orderItem.quantity + 1 }
                     : orderItem
             ));
         } else {
-            setCurrentOrder([...currentOrder, { ...item, quantity: 1 }]);
+            setCurrentOrder([...currentOrder, {
+                ...selectedItem,
+                quantity: 1,
+                cookingInstructions
+            }]);
         }
+
+        setShowInstructionsModal(false);
+        setCookingInstructions('');
+        setSelectedItem(null);
     };
 
     const handleQuantityChange = (itemId, change) => {
@@ -392,9 +464,14 @@ function TakeOrderPanel({ isOpen, onClose, tableId, isAdditionalOrder = false })
                                         </div>
                                         <div className="space-y-4">
                                             {currentOrder.map((item) => (
-                                                <div key={item.id} className="flex items-center justify-between">
+                                                <div key={item.id + item.cookingInstructions} className="flex items-center justify-between">
                                                     <div>
                                                         <div className="font-medium text-gray-900">{item.name}</div>
+                                                        {item.cookingInstructions && (
+                                                            <div className="text-sm text-gray-500 italic">
+                                                                Note: {item.cookingInstructions}
+                                                            </div>
+                                                        )}
                                                         <div className="text-sm text-gray-500">
                                                             ${(item.price * item.quantity).toFixed(2)}
                                                         </div>
@@ -452,6 +529,46 @@ function TakeOrderPanel({ isOpen, onClose, tableId, isAdditionalOrder = false })
                                         </Button>
                                     </div>
                                 </div>
+
+                                {/* Cooking Instructions Modal */}
+                                {showInstructionsModal && (
+                                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                                        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => {
+                                            setShowInstructionsModal(false);
+                                            setCookingInstructions('');
+                                            setSelectedItem(null);
+                                        }} />
+                                        <div className="relative bg-white rounded-lg p-6 w-full max-w-md">
+                                            <h3 className="text-lg font-medium text-gray-900 mb-4">
+                                                Add Special Instructions
+                                            </h3>
+                                            <textarea
+                                                value={cookingInstructions}
+                                                onChange={(e) => setCookingInstructions(e.target.value)}
+                                                placeholder="Enter any special instructions or notes for the kitchen..."
+                                                className="w-full h-32 p-3 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                                            />
+                                            <div className="mt-4 flex justify-end gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        setShowInstructionsModal(false);
+                                                        setCookingInstructions('');
+                                                        setSelectedItem(null);
+                                                    }}
+                                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={handleConfirmAddToOrder}
+                                                    className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700"
+                                                >
+                                                    Add to Order
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </motion.div>

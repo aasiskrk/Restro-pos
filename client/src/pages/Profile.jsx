@@ -132,8 +132,8 @@ export default function Profile() {
                                         <a
                                             href={item.href}
                                             className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg ${item.name === 'Profile'
-                                                    ? 'bg-orange-50 text-orange-600'
-                                                    : 'text-gray-700 hover:bg-gray-50'
+                                                ? 'bg-orange-50 text-orange-600'
+                                                : 'text-gray-700 hover:bg-gray-50'
                                                 }`}
                                         >
                                             <item.icon className="h-5 w-5" />

@@ -11,7 +11,7 @@ import {
     BanknotesIcon,
 } from '@heroicons/react/24/outline';
 import { ClockIcon as ClockIconSolid } from '@heroicons/react/24/solid';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import DashboardLayout from '../../components/admin/DashboardLayout';
 import { Button } from '../../components/common/Form';
 
 const navigation = [
