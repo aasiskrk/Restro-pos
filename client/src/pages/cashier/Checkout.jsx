@@ -18,7 +18,7 @@ import {
     ReceiptPercentIcon,
 } from '@heroicons/react/24/outline';
 import { CreditCardIcon as CreditCardIconSolid } from '@heroicons/react/24/solid';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import DashboardLayout from '../../components/admin/DashboardLayout';
 import { Button } from '../../components/common/Form';
 
 const navigation = [

@@ -19,7 +19,7 @@ import {
 import { UsersIcon as UsersIconSolid } from '@heroicons/react/24/solid';
 import { Dialog, Transition } from '@headlessui/react';
 import { Input, Select, Button } from '../../components/common/Form';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import DashboardLayout from '../../components/admin/DashboardLayout';
 
 const staffStatusColors = {
     present: 'bg-green-100 text-green-800',
@@ -34,6 +34,7 @@ const navigation = [
     { name: 'Menu Management', icon: ClipboardDocumentListIcon, href: '/admin/menu', current: false },
     { name: 'Orders & Tables', icon: TableCellsIcon, href: '/admin/orders', current: false },
     { name: 'Inventory', icon: CubeIcon, href: '/admin/inventory', current: false },
+    { name: 'Audit Logs', icon: ClipboardDocumentListIcon, href: '/admin/audit-logs', current: false },
     { name: 'Settings', icon: Cog6ToothIcon, href: '/admin/settings', current: false },
 ];
 

@@ -15,7 +15,7 @@ import {
     EyeIcon,
     ClockIcon,
 } from '@heroicons/react/24/outline';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import DashboardLayout from '../../components/admin/DashboardLayout';
 import { Input, Button } from '../../components/common/Form';
 import { Link } from 'react-router-dom';
 import { TableCellsIcon as TableCellsIconSolid } from '@heroicons/react/24/solid';
@@ -26,6 +26,7 @@ const navigation = [
     { name: 'Menu Management', icon: ClipboardDocumentListIcon, href: '/admin/menu', current: false },
     { name: 'Orders & Tables', icon: TableCellsIcon, href: '/admin/orders', current: true },
     { name: 'Inventory', icon: CubeIcon, href: '/admin/inventory', current: false },
+    { name: 'Audit Logs', icon: ClipboardDocumentListIcon, href: '/admin/audit-logs', current: false },
     { name: 'Settings', icon: Cog6ToothIcon, href: '/admin/settings', current: false },
 ];
 
