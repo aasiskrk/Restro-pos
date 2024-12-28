@@ -10,6 +10,7 @@ import {
     Bars3Icon,
 } from '@heroicons/react/24/outline';
 import { BellIcon as BellIconSolid } from '@heroicons/react/24/solid';
+import { Link } from 'react-router-dom';
 
 function classNames(...classes) {
     return classes.filter(Boolean).join(' ');
@@ -23,9 +24,9 @@ export default function Header({ onToggleSidebar }) {
     ]);
 
     const userNavigation = [
-        { name: 'Profile', href: '#', icon: UserCircleIcon },
-        { name: 'Settings', href: '#', icon: Cog6ToothIcon },
-        { name: 'Sign out', href: '#', icon: ArrowRightOnRectangleIcon },
+        { name: 'Profile', href: '/profile', icon: UserCircleIcon },
+        { name: 'Settings', href: '/profile/settings', icon: Cog6ToothIcon },
+        { name: 'Sign out', href: '/logout', icon: ArrowRightOnRectangleIcon },
     ];
 
     return (
@@ -141,19 +142,18 @@ export default function Header({ onToggleSidebar }) {
                                     {userNavigation.map((item) => (
                                         <Menu.Item key={item.name}>
                                             {({ active }) => (
-                                                <motion.a
-                                                    href={item.href}
+                                                <Link
+                                                    to={item.href}
                                                     className={classNames(
                                                         active ? 'bg-gray-50' : '',
                                                         'block px-4 py-2 text-sm text-gray-700'
                                                     )}
-                                                    whileHover={{ x: 4 }}
                                                 >
                                                     <div className="flex items-center">
                                                         <item.icon className="mr-3 h-5 w-5 text-gray-400" />
                                                         {item.name}
                                                     </div>
-                                                </motion.a>
+                                                </Link>
                                             )}
                                         </Menu.Item>
                                     ))}

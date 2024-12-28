@@ -18,6 +18,9 @@ import Signup from './pages/Signup';
 import { ThemeProvider } from './context/ThemeContext';
 import PaymentHistory from './pages/cashier/PaymentHistory';
 import InventoryAlert from './pages/kitchen/InventoryAlert';
+import Profile from './pages/Profile';
+import ProfileSettings from './pages/Settings';
+import AuditLogs from './pages/admin/AuditLogs';
 
 function App() {
   return (
@@ -35,6 +38,7 @@ function App() {
           <Route path="/admin/menu" element={<MenuManagement />} />
           <Route path="/admin/orders" element={<OrdersAndTables />} />
           <Route path="/admin/inventory" element={<Inventory />} />
+          <Route path="/admin/audit-logs" element={<AuditLogs />} />
           <Route path="/admin/settings" element={<Settings />} />
 
           {/* Role-based Routes */}
@@ -47,6 +51,10 @@ function App() {
           <Route path="/cashier/history" element={<PaymentHistory />} />
           <Route path="/kitchen" element={<KitchenInterface />} />
           <Route path="/kitchen/inventory" element={<InventoryAlert />} />
+
+          {/* Common Routes (accessible by all roles) */}
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/settings" element={<ProfileSettings />} />
         </Routes>
       </Router>
     </ThemeProvider>
