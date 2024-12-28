@@ -11,7 +11,7 @@ import {
     Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 import { ChartBarIcon as ChartBarIconSolid } from '@heroicons/react/24/solid';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import DashboardLayout from '../../components/admin/DashboardLayout';
 
 const navigation = [
     { name: 'Dashboard', icon: ChartBarIcon, href: '/admin', current: true },
@@ -19,6 +19,7 @@ const navigation = [
     { name: 'Menu Management', icon: ClipboardDocumentListIcon, href: '/admin/menu', current: false },
     { name: 'Orders & Tables', icon: TableCellsIcon, href: '/admin/orders', current: false },
     { name: 'Inventory', icon: CubeIcon, href: '/admin/inventory', current: false },
+    { name: 'Audit Logs', icon: ClipboardDocumentListIcon, href: '/admin/audit-logs', current: false },
     { name: 'Settings', icon: Cog6ToothIcon, href: '/admin/settings', current: false },
 ];
 
@@ -163,8 +164,8 @@ export default function Dashboard() {
                                         <p className="text-sm text-gray-500">{order.items} items • {order.amount}</p>
                                     </div>
                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status === 'Completed'
-                                            ? 'bg-green-100 text-green-800'
-                                            : 'bg-yellow-100 text-yellow-800'
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-yellow-100 text-yellow-800'
                                         }`}>
                                         {order.status}
                                     </span>

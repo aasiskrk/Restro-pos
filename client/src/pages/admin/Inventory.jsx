@@ -13,7 +13,7 @@ import {
     Cog6ToothIcon,
     FunnelIcon,
 } from '@heroicons/react/24/outline';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import DashboardLayout from '../../components/admin/DashboardLayout';
 import { Input, Select, Button } from '../../components/common/Form';
 
 const navigation = [
@@ -22,6 +22,7 @@ const navigation = [
     { name: 'Menu Management', icon: ClipboardDocumentListIcon, href: '/admin/menu', current: false },
     { name: 'Orders & Tables', icon: TableCellsIcon, href: '/admin/orders', current: false },
     { name: 'Inventory', icon: CubeIcon, href: '/admin/inventory', current: true },
+    { name: 'Audit Logs', icon: ClipboardDocumentListIcon, href: '/admin/audit-logs', current: false },
     { name: 'Settings', icon: Cog6ToothIcon, href: '/admin/settings', current: false },
 ];
 
