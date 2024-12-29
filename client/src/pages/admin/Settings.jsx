@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     BuildingStorefrontIcon,
@@ -18,6 +18,8 @@ import {
 } from '@heroicons/react/24/outline';
 import DashboardLayout from '../../components/admin/DashboardLayout';
 import { Input, Button } from '../../components/common/Form';
+import { getRestaurantDetailsApi, updateRestaurantDetailsApi } from '../../apis/api';
+import { toast } from 'react-hot-toast';
 
 const navigation = [
     { name: 'Dashboard', icon: ChartBarIcon, href: '/admin', current: false },
@@ -71,20 +73,79 @@ const settingsSections = [
 export default function Settings() {
     const [activeSection, setActiveSection] = useState('restaurant');
     const [isEditing, setIsEditing] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [restaurantData, setRestaurantData] = useState({
-        name: 'Sample Restaurant',
-        ownerName: 'John Doe',
-        email: 'contact@samplerestaurant.com',
-        phone: '+1 234 567 8900',
-        address: '123 Restaurant Street, Foodville, FC 12345',
-        website: 'www.samplerestaurant.com',
-        openingHours: '9:00 AM - 10:00 PM',
-        description: 'A cozy restaurant serving delicious meals.',
+        name: '',
+        ownerName: '',
+        email: '',
+        phone: '',
+        address: '',
         logo: null
     });
 
-    const handleSave = () => {
-        setIsEditing(false);
+    // Fetch restaurant details
+    useEffect(() => {
+        fetchRestaurantDetails();
+    }, []);
+
+    const fetchRestaurantDetails = async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const response = await getRestaurantDetailsApi();
+            console.log('Fetched restaurant data:', response.data); // Debug log
+
+            if (response.data.restaurant) {
+                setRestaurantData({
+                    name: response.data.restaurant.restaurantName || '',
+                    ownerName: response.data.restaurant.ownerName || '',
+                    email: response.data.restaurant.email || '',
+                    phone: response.data.restaurant.phone || '',
+                    address: response.data.restaurant.address || '',
+                    logo: response.data.restaurant.logo || null
+                });
+            } else {
+                setError('No restaurant data found');
+            }
+        } catch (err) {
+            console.log('Fetch error details:', err.response?.data); // Debug log
+            setError('Failed to fetch restaurant details');
+            toast.error('Failed to fetch restaurant details');
+            console.error('Fetch restaurant details error:', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        try {
+            // Create update data with empty strings instead of undefined
+            const updateData = {
+                restaurantName: restaurantData.name,
+                ownerName: restaurantData.ownerName,
+                email: restaurantData.email,
+                phone: restaurantData.phone,
+                address: restaurantData.address
+            };
+
+            console.log('Sending update data:', updateData); // Debug log
+
+            const response = await updateRestaurantDetailsApi(updateData);
+            console.log('Response:', response); // Debug log
+
+            if (response.data.success) {
+                toast.success('Restaurant details updated successfully');
+                setIsEditing(false);
+                fetchRestaurantDetails();
+            } else {
+                toast.error(response.data.message || 'Failed to update restaurant details');
+            }
+        } catch (err) {
+            console.log('Error details:', err.response?.data); // Debug log
+            toast.error(err.response?.data?.message || 'Failed to update restaurant details');
+            console.error('Update restaurant details error:', err);
+        }
     };
 
     return (
@@ -132,6 +193,7 @@ export default function Settings() {
                                         <Button
                                             onClick={() => setIsEditing(!isEditing)}
                                             variant={isEditing ? "secondary" : "primary"}
+                                            disabled={isLoading}
                                         >
                                             {isEditing ? 'Cancel' : 'Edit Profile'}
                                         </Button>
@@ -139,98 +201,94 @@ export default function Settings() {
                                 </div>
 
                                 <div className="p-6">
-                                    {/* Logo Upload */}
-                                    <div className="flex justify-center mb-8">
-                                        <div className="relative">
-                                            <motion.div
-                                                whileHover={{ scale: 1.05 }}
-                                                className="h-32 w-32 rounded-2xl bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300"
-                                            >
-                                                {restaurantData.logo ? (
-                                                    <img
-                                                        src={restaurantData.logo}
-                                                        alt="Restaurant logo"
-                                                        className="h-full w-full object-cover"
+                                    {isLoading ? (
+                                        <div className="flex justify-center items-center h-64">
+                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+                                        </div>
+                                    ) : error ? (
+                                        <div className="text-center text-red-500 py-8">{error}</div>
+                                    ) : (
+                                        <>
+                                            {/* Logo Upload */}
+                                            <div className="flex justify-center mb-8">
+                                                <div className="relative">
+                                                    <motion.div
+                                                        whileHover={{ scale: 1.05 }}
+                                                        className="h-32 w-32 rounded-2xl bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300"
+                                                    >
+                                                        {restaurantData.logo ? (
+                                                            <img
+                                                                src={restaurantData.logo}
+                                                                alt="Restaurant logo"
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <BuildingStorefrontIcon className="h-16 w-16 text-gray-400" />
+                                                        )}
+                                                    </motion.div>
+                                                    {isEditing && (
+                                                        <motion.label
+                                                            whileHover={{ scale: 1.1 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            className="absolute -bottom-2 -right-2 p-2 bg-orange-500 rounded-full cursor-pointer hover:bg-orange-600 transition-colors shadow-lg"
+                                                        >
+                                                            <CameraIcon className="h-5 w-5 text-white" />
+                                                            <input type="file" className="hidden" accept="image/*" />
+                                                        </motion.label>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Form Fields */}
+                                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                                <Input
+                                                    label="Restaurant Name"
+                                                    value={restaurantData.name}
+                                                    onChange={(e) => setRestaurantData({ ...restaurantData, name: e.target.value })}
+                                                    disabled={!isEditing}
+                                                    required
+                                                />
+                                                <Input
+                                                    label="Owner Name"
+                                                    value={restaurantData.ownerName}
+                                                    onChange={(e) => setRestaurantData({ ...restaurantData, ownerName: e.target.value })}
+                                                    disabled={!isEditing}
+                                                    required
+                                                />
+                                                <Input
+                                                    label="Email"
+                                                    type="email"
+                                                    value={restaurantData.email}
+                                                    onChange={(e) => setRestaurantData({ ...restaurantData, email: e.target.value })}
+                                                    disabled={!isEditing}
+                                                    required
+                                                />
+                                                <Input
+                                                    label="Phone"
+                                                    value={restaurantData.phone}
+                                                    onChange={(e) => setRestaurantData({ ...restaurantData, phone: e.target.value })}
+                                                    disabled={!isEditing}
+                                                    required
+                                                />
+                                                <div className="sm:col-span-2">
+                                                    <Input
+                                                        label="Address"
+                                                        value={restaurantData.address}
+                                                        onChange={(e) => setRestaurantData({ ...restaurantData, address: e.target.value })}
+                                                        disabled={!isEditing}
+                                                        required
                                                     />
-                                                ) : (
-                                                    <BuildingStorefrontIcon className="h-16 w-16 text-gray-400" />
-                                                )}
-                                            </motion.div>
+                                                </div>
+                                            </div>
+
                                             {isEditing && (
-                                                <motion.label
-                                                    whileHover={{ scale: 1.1 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    className="absolute -bottom-2 -right-2 p-2 bg-orange-500 rounded-full cursor-pointer hover:bg-orange-600 transition-colors shadow-lg"
-                                                >
-                                                    <CameraIcon className="h-5 w-5 text-white" />
-                                                    <input type="file" className="hidden" accept="image/*" />
-                                                </motion.label>
+                                                <div className="flex justify-end mt-6">
+                                                    <Button onClick={handleSave}>
+                                                        Save Changes
+                                                    </Button>
+                                                </div>
                                             )}
-                                        </div>
-                                    </div>
-
-                                    {/* Form Fields */}
-                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                        <Input
-                                            label="Restaurant Name"
-                                            value={restaurantData.name}
-                                            onChange={(e) => setRestaurantData({ ...restaurantData, name: e.target.value })}
-                                            disabled={!isEditing}
-                                            required
-                                        />
-                                        <Input
-                                            label="Owner Name"
-                                            value={restaurantData.ownerName}
-                                            onChange={(e) => setRestaurantData({ ...restaurantData, ownerName: e.target.value })}
-                                            disabled={!isEditing}
-                                            required
-                                        />
-                                        <Input
-                                            label="Email"
-                                            type="email"
-                                            value={restaurantData.email}
-                                            onChange={(e) => setRestaurantData({ ...restaurantData, email: e.target.value })}
-                                            disabled={!isEditing}
-                                            required
-                                        />
-                                        <Input
-                                            label="Phone"
-                                            value={restaurantData.phone}
-                                            onChange={(e) => setRestaurantData({ ...restaurantData, phone: e.target.value })}
-                                            disabled={!isEditing}
-                                            required
-                                        />
-                                        <Input
-                                            label="Website"
-                                            value={restaurantData.website}
-                                            onChange={(e) => setRestaurantData({ ...restaurantData, website: e.target.value })}
-                                            disabled={!isEditing}
-                                        />
-                                        <Input
-                                            label="Opening Hours"
-                                            value={restaurantData.openingHours}
-                                            onChange={(e) => setRestaurantData({ ...restaurantData, openingHours: e.target.value })}
-                                            disabled={!isEditing}
-                                            required
-                                        />
-                                        <div className="sm:col-span-2">
-                                            <Input
-                                                label="Address"
-                                                value={restaurantData.address}
-                                                onChange={(e) => setRestaurantData({ ...restaurantData, address: e.target.value })}
-                                                disabled={!isEditing}
-                                                required
-                                            />
-                                        </div>
-
-                                    </div>
-
-                                    {isEditing && (
-                                        <div className="flex justify-end mt-6">
-                                            <Button onClick={handleSave}>
-                                                Save Changes
-                                            </Button>
-                                        </div>
+                                        </>
                                     )}
                                 </div>
                             </div>

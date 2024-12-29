@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import BackButton from '../components/common/BackButton';
 import logo from '../assets/frame.svg';
+import { registerApi } from '../apis/api';
+import { toast } from 'react-hot-toast';
 
 export default function Signup() {
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({
         restaurantName: '',
         ownerName: '',
@@ -35,6 +39,64 @@ export default function Signup() {
         { value: 'buffet', label: 'Buffet' },
         { value: 'foodtruck', label: 'Food Truck' }
     ];
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        // Validate passwords match
+        if (formData.password !== formData.confirmPassword) {
+            toast.error("Passwords do not match");
+            return;
+        }
+
+        // Validate all fields are filled
+        const requiredFields = ['restaurantName', 'ownerName', 'size', 'type', 'phone', 'email', 'password'];
+        const missingFields = requiredFields.filter(field => !formData[field]);
+        if (missingFields.length > 0) {
+            toast.error("Please fill in all required fields");
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            const response = await registerApi({
+                restaurantName: formData.restaurantName,
+                ownerName: formData.ownerName,
+                restaurantSize: formData.size,
+                restaurantType: formData.type,
+                phone: formData.phone,
+                email: formData.email,
+                password: formData.password,
+                confirmPassword: formData.confirmPassword
+            });
+
+            if (response.data.success) {
+                toast.success("Restaurant registration successful!");
+                // Navigate to admin setup with restaurant data and credentials
+                navigate('/admin-setup', {
+                    state: {
+                        restaurantData: {
+                            ...response.data.restaurant,
+                            password: formData.password // Pass the password to admin setup
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            toast.error(error.response?.data?.message || "Registration failed");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-orange-600 flex">
@@ -75,7 +137,7 @@ export default function Signup() {
                                 <h2 className="mt-2 text-xl font-semibold text-gray-900">Register Your Restaurant</h2>
                             </div>
 
-                            <form className="space-y-6">
+                            <form onSubmit={handleSubmit} className="space-y-6">
                                 <div>
                                     <label htmlFor="restaurantName" className="block text-sm font-medium text-gray-700">
                                         Restaurant Name
@@ -84,6 +146,8 @@ export default function Signup() {
                                         type="text"
                                         id="restaurantName"
                                         name="restaurantName"
+                                        value={formData.restaurantName}
+                                        onChange={handleChange}
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
                                         required
                                     />
@@ -97,6 +161,8 @@ export default function Signup() {
                                         type="text"
                                         id="ownerName"
                                         name="ownerName"
+                                        value={formData.ownerName}
+                                        onChange={handleChange}
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
                                         required
                                     />
@@ -111,7 +177,7 @@ export default function Signup() {
                                             id="type"
                                             name="type"
                                             value={formData.type}
-                                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                            onChange={handleChange}
                                             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
                                             required
                                         >
@@ -132,7 +198,7 @@ export default function Signup() {
                                             id="size"
                                             name="size"
                                             value={formData.size}
-                                            onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                                            onChange={handleChange}
                                             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
                                             required
                                         >
@@ -154,6 +220,8 @@ export default function Signup() {
                                         type="tel"
                                         id="phone"
                                         name="phone"
+                                        value={formData.phone}
+                                        onChange={handleChange}
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
                                         required
                                     />
@@ -167,6 +235,8 @@ export default function Signup() {
                                         type="email"
                                         id="email"
                                         name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
                                         required
                                     />
@@ -180,6 +250,8 @@ export default function Signup() {
                                         type="password"
                                         id="password"
                                         name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
                                         required
                                     />
@@ -193,6 +265,8 @@ export default function Signup() {
                                         type="password"
                                         id="confirmPassword"
                                         name="confirmPassword"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
                                         required
                                     />
@@ -201,9 +275,10 @@ export default function Signup() {
                                 <div>
                                     <button
                                         type="submit"
-                                        className="w-full flex justify-center py-2.5 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                                        disabled={isLoading}
+                                        className="w-full flex justify-center py-2.5 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        Register Restaurant
+                                        {isLoading ? 'Registering...' : 'Register Restaurant'}
                                     </button>
                                 </div>
                             </form>

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Dashboard from './pages/admin/Dashboard';
@@ -21,6 +21,7 @@ import InventoryAlert from './pages/kitchen/InventoryAlert';
 import Profile from './pages/Profile';
 import ProfileSettings from './pages/Settings';
 import AuditLogs from './pages/admin/AuditLogs';
+import AdminSetup from './pages/AdminSetup';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/admin-setup" element={<AdminSetup />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<Dashboard />} />
