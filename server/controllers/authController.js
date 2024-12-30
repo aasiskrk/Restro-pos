@@ -6,8 +6,16 @@ const Restaurant = require("../models/restaurantModel");
 // Register a new restaurant
 exports.register = async (req, res) => {
   try {
-    const { restaurantName, ownerName, size, type, email, phone, password } =
-      req.body;
+    const {
+      restaurantName,
+      ownerName,
+      size,
+      type,
+      email,
+      phone,
+      password,
+      address,
+    } = req.body;
 
     // Check if restaurant with email already exists
     const existingRestaurant = await Restaurant.findOne({ email });
@@ -26,6 +34,7 @@ exports.register = async (req, res) => {
       type,
       email,
       phone,
+      address,
     });
 
     await restaurant.save();
@@ -120,7 +129,7 @@ exports.login = async (req, res) => {
 // Setup admin user
 exports.setupAdmin = async (req, res) => {
   try {
-    const { fullName, email, phone, password, address } = req.body;
+    const { fullName, email, phone, password, location } = req.body;
 
     // Find restaurant by email
     const restaurant = await Restaurant.findOne({ email });
@@ -150,7 +159,7 @@ exports.setupAdmin = async (req, res) => {
       phone,
       password,
       role: "admin",
-      address,
+      location,
       restaurant: restaurant._id,
       isActive: true,
     });
@@ -221,7 +230,7 @@ exports.getCurrentUser = async (req, res) => {
 // Update user profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { fullName, phone, address } = req.body;
+    const { fullName, phone, location } = req.body;
 
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -231,16 +240,24 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
-    user.fullName = fullName || user.fullName;
-    user.phone = phone || user.phone;
-    user.address = address || user.address;
+    // Update user fields
+    if (fullName) user.fullName = fullName;
+    if (phone) user.phone = phone;
+    if (location) user.location = location;
+    user.updatedAt = Date.now();
 
     await user.save();
+
+    // Remove sensitive data
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.resetPasswordToken;
+    delete userResponse.resetPasswordExpires;
 
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      user,
+      user: userResponse,
     });
   } catch (error) {
     console.error("Update profile error:", error);

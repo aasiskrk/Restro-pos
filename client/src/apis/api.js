@@ -36,13 +36,19 @@ Api.interceptors.response.use(
 export const registerApi = (data) => Api.post("/auth/register", data);
 export const loginApi = (data) => Api.post("/auth/login", data);
 export const getCurrentUserApi = () => Api.get("/auth/me");
-export const updateProfileApi = (data) => Api.put("/auth/profile", data);
+export const updateProfileApi = (data) => Api.put("/auth/update-profile", data);
 export const changePasswordApi = (data) =>
   Api.post("/auth/change-password", data);
 export const forgotPasswordApi = (data) =>
   Api.post("/auth/forgot-password", data);
 export const resetPasswordApi = (data) =>
   Api.post("/auth/reset-password", data);
+
+// Logout function
+export const logout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+};
 
 // Admin Setup
 export const setupAdminApi = (adminData) =>
@@ -77,5 +83,46 @@ export const updateMenuItemApi = (id, data) =>
 export const deleteMenuItemApi = (id) => Api.delete(`/menu/delete/${id}`);
 export const toggleMenuItemAvailabilityApi = (id) =>
   Api.patch(`/menu/toggle/${id}`);
+
+// Staff Management APIs
+export const createStaff = async (staffData) => {
+  const response = await Api.post("/staff", staffData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+};
+
+export const getAllStaff = async () => {
+  const response = await Api.get("/staff");
+  return response.data;
+};
+
+export const getStaff = async (id) => {
+  const response = await Api.get(`/staff/${id}`);
+  return response.data;
+};
+
+export const updateStaff = async (id, staffData) => {
+  const response = await Api.patch(`/staff/${id}`, staffData);
+  return response.data;
+};
+
+export const deleteStaff = async (id) => {
+  const response = await Api.delete(`/staff/${id}`);
+  return response.data;
+};
+
+// Staff Attendance APIs
+export const getAttendanceHistory = async (params) => {
+  const response = await Api.get("/staff/attendance-history", { params });
+  return response.data;
+};
+
+export const updateAttendanceStatus = async (staffId, status) => {
+  const response = await Api.put("/staff/attendance", { staffId, status });
+  return response.data;
+};
 
 export default Api;

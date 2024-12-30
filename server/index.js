@@ -4,6 +4,9 @@ const mongoose = require("mongoose");
 const connectDB = require("./database/database");
 const cors = require("cors");
 const fileUpload = require("express-fileupload");
+const staffRoutes = require("./routes/staffRoutes");
+const errorHandler = require("./middleware/errorMiddleware");
+const AppError = require("./utils/appError");
 
 // Creating an express app
 const app = express();
@@ -48,6 +51,15 @@ app.use("/api/menu", require("./routes/menuRoutes"));
 app.use("/api/order", require("./routes/orderRoutes"));
 app.use("/api/table", require("./routes/tableRoutes"));
 app.use("/api/inventory", require("./routes/inventoryRoutes"));
+app.use("/api/staff", staffRoutes);
+
+// Handle undefined routes
+app.all("*", (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
+
+// Error handling middleware
+app.use(errorHandler);
 
 // Starting the server
 app.listen(PORT, () => {
