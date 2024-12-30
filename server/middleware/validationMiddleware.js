@@ -92,13 +92,17 @@ const validateAdminSetup = (req, res, next) => {
 };
 
 const validateProfileUpdate = (req, res, next) => {
-  const { fullName, phone, address } = req.body;
+  const { fullName, phone, location } = req.body;
 
-  if (!fullName || !phone || !address) {
-    return res.status(400).json({
-      success: false,
-      message: "Please provide all required fields",
-    });
+  // All fields are optional, but if phone is provided, validate its format
+  if (phone) {
+    const phoneRegex = /^\+?[\d\s-]{10,}$/;
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid phone number",
+      });
+    }
   }
 
   next();
