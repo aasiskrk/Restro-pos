@@ -10,23 +10,34 @@ import {
     Bars3Icon,
 } from '@heroicons/react/24/outline';
 import { BellIcon as BellIconSolid } from '@heroicons/react/24/solid';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { logout } from '../../apis/api';
 
 function classNames(...classes) {
     return classes.filter(Boolean).join(' ');
 }
 
 export default function Header({ onToggleSidebar }) {
+    const navigate = useNavigate();
     const [notifications] = useState([
         { id: 1, text: 'New order #123 received', unread: true },
         { id: 2, text: 'Low stock alert: Chicken Wings', unread: true },
         { id: 3, text: 'Staff schedule updated', unread: false },
     ]);
 
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
+
     const userNavigation = [
         { name: 'Profile', href: '/profile', icon: UserCircleIcon },
         { name: 'Settings', href: '/profile/settings', icon: Cog6ToothIcon },
-        { name: 'Sign out', href: '/logout', icon: ArrowRightOnRectangleIcon },
+        {
+            name: 'Sign out',
+            icon: ArrowRightOnRectangleIcon,
+            onClick: handleLogout
+        },
     ];
 
     return (
@@ -142,18 +153,33 @@ export default function Header({ onToggleSidebar }) {
                                     {userNavigation.map((item) => (
                                         <Menu.Item key={item.name}>
                                             {({ active }) => (
-                                                <Link
-                                                    to={item.href}
-                                                    className={classNames(
-                                                        active ? 'bg-gray-50' : '',
-                                                        'block px-4 py-2 text-sm text-gray-700'
-                                                    )}
-                                                >
-                                                    <div className="flex items-center">
-                                                        <item.icon className="mr-3 h-5 w-5 text-gray-400" />
-                                                        {item.name}
-                                                    </div>
-                                                </Link>
+                                                item.onClick ? (
+                                                    <button
+                                                        onClick={item.onClick}
+                                                        className={classNames(
+                                                            active ? 'bg-gray-50' : '',
+                                                            'block w-full text-left px-4 py-2 text-sm text-gray-700'
+                                                        )}
+                                                    >
+                                                        <div className="flex items-center">
+                                                            <item.icon className="mr-3 h-5 w-5 text-gray-400" />
+                                                            {item.name}
+                                                        </div>
+                                                    </button>
+                                                ) : (
+                                                    <Link
+                                                        to={item.href}
+                                                        className={classNames(
+                                                            active ? 'bg-gray-50' : '',
+                                                            'block px-4 py-2 text-sm text-gray-700'
+                                                        )}
+                                                    >
+                                                        <div className="flex items-center">
+                                                            <item.icon className="mr-3 h-5 w-5 text-gray-400" />
+                                                            {item.name}
+                                                        </div>
+                                                    </Link>
+                                                )
                                             )}
                                         </Menu.Item>
                                     ))}

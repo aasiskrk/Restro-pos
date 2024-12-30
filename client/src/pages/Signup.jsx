@@ -18,7 +18,8 @@ export default function Signup() {
         phone: '',
         email: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        address: ''
     });
 
     const restaurantSizes = [
@@ -58,7 +59,7 @@ export default function Signup() {
         }
 
         // Validate all fields are filled
-        const requiredFields = ['restaurantName', 'ownerName', 'size', 'type', 'phone', 'email', 'password'];
+        const requiredFields = ['restaurantName', 'ownerName', 'size', 'type', 'phone', 'email', 'password', 'address'];
         const missingFields = requiredFields.filter(field => !formData[field]);
         if (missingFields.length > 0) {
             toast.error("Please fill in all required fields");
@@ -70,12 +71,12 @@ export default function Signup() {
             const response = await registerApi({
                 restaurantName: formData.restaurantName,
                 ownerName: formData.ownerName,
-                restaurantSize: formData.size,
-                restaurantType: formData.type,
+                size: formData.size,
+                type: formData.type,
                 phone: formData.phone,
                 email: formData.email,
                 password: formData.password,
-                confirmPassword: formData.confirmPassword
+                address: formData.address
             });
 
             if (response.data.success) {
@@ -168,48 +169,19 @@ export default function Signup() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="type" className="block text-sm font-medium text-gray-700">
-                                            Restaurant Type
-                                        </label>
-                                        <select
-                                            id="type"
-                                            name="type"
-                                            value={formData.type}
-                                            onChange={handleChange}
-                                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
-                                            required
-                                        >
-                                            <option value="">Select Type</option>
-                                            {restaurantTypes.map(type => (
-                                                <option key={type.value} value={type.value}>
-                                                    {type.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="size" className="block text-sm font-medium text-gray-700">
-                                            Restaurant Size
-                                        </label>
-                                        <select
-                                            id="size"
-                                            name="size"
-                                            value={formData.size}
-                                            onChange={handleChange}
-                                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
-                                            required
-                                        >
-                                            <option value="">Select Size</option>
-                                            {restaurantSizes.map(size => (
-                                                <option key={size.value} value={size.value}>
-                                                    {size.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                <div>
+                                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                                        Address
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="address"
+                                        name="address"
+                                        value={formData.address}
+                                        onChange={handleChange}
+                                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
+                                        required
+                                    />
                                 </div>
 
                                 <div>
@@ -270,6 +242,50 @@ export default function Signup() {
                                         className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
                                         required
                                     />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                                            Restaurant Type
+                                        </label>
+                                        <select
+                                            id="type"
+                                            name="type"
+                                            value={formData.type}
+                                            onChange={handleChange}
+                                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
+                                            required
+                                        >
+                                            <option value="">Select Type</option>
+                                            {restaurantTypes.map(type => (
+                                                <option key={type.value} value={type.value}>
+                                                    {type.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="size" className="block text-sm font-medium text-gray-700">
+                                            Restaurant Size
+                                        </label>
+                                        <select
+                                            id="size"
+                                            name="size"
+                                            value={formData.size}
+                                            onChange={handleChange}
+                                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
+                                            required
+                                        >
+                                            <option value="">Select Size</option>
+                                            {restaurantSizes.map(size => (
+                                                <option key={size.value} value={size.value}>
+                                                    {size.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div>

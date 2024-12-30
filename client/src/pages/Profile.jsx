@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import {
     UserIcon,
     Cog6ToothIcon,
     ArrowLeftIcon,
     PencilIcon,
     ArrowRightOnRectangleIcon,
+    KeyIcon,
 } from '@heroicons/react/24/outline';
+import { getCurrentUserApi, updateProfileApi, changePasswordApi } from '../apis/api';
 
 const profileNavigation = [
     { name: 'Profile', icon: UserIcon, href: '/profile' },
@@ -15,84 +18,49 @@ const profileNavigation = [
     { name: 'Logout', icon: ArrowRightOnRectangleIcon, href: '/logout' },
 ];
 
-// Role-specific mock data
-const roleData = {
-    admin: {
-        role: 'Administrator',
-        permissions: [
-            'Staff Management',
-            'Menu Management',
-            'Inventory Management',
-            'Settings Management',
-            'View Reports',
-            'System Configuration'
-        ]
-    },
-    server: {
-        role: 'Server',
-        permissions: [
-            'Take Orders',
-            'View Menu',
-            'Update Order Status',
-            'View Order History',
-            'Call Kitchen'
-        ]
-    },
-    cashier: {
-        role: 'Cashier',
-        permissions: [
-            'Process Payments',
-            'View Orders',
-            'Split Bills',
-            'Apply Discounts',
-            'View Payment History'
-        ]
-    },
-    kitchen: {
-        role: 'Kitchen Staff',
-        permissions: [
-            'View Orders',
-            'Update Order Status',
-            'Manage Inventory',
-            'View Menu',
-            'Call Server'
-        ]
-    }
-};
-
 export default function Profile() {
     const [editMode, setEditMode] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [changePasswordMode, setChangePasswordMode] = useState(false);
     const location = useLocation();
-    const [userRole, setUserRole] = useState('');
-
-    // Determine user role from the current path
-    useEffect(() => {
-        const path = location.pathname;
-        if (path.includes('/admin')) setUserRole('admin');
-        else if (path.includes('/server')) setUserRole('server');
-        else if (path.includes('/cashier')) setUserRole('cashier');
-        else if (path.includes('/kitchen')) setUserRole('kitchen');
-    }, [location]);
 
     const [formData, setFormData] = useState({
-        fullName: 'John Smith',
-        email: 'john.doe@dinetrack.com',
-        phone: '+1 (555) 123-4567',
-        location: 'New York, USA',
-        department: roleData[userRole]?.role || '',
-        role: roleData[userRole]?.role || '',
-        permissions: roleData[userRole]?.permissions || []
+        fullName: '',
+        email: '',
+        phone: '',
+        location: '',
+        role: '',
     });
 
-    // Update form data when role changes
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+    });
+
+    // Fetch user data
     useEffect(() => {
-        setFormData(prev => ({
-            ...prev,
-            department: roleData[userRole]?.role || '',
-            role: roleData[userRole]?.role || '',
-            permissions: roleData[userRole]?.permissions || []
-        }));
-    }, [userRole]);
+        fetchUserData();
+    }, []);
+
+    const fetchUserData = async () => {
+        try {
+            const response = await getCurrentUserApi();
+            const userData = response.data.user;
+            setFormData({
+                fullName: userData.fullName || '',
+                email: userData.email || '',
+                phone: userData.phone || '',
+                location: userData.location || '',
+                role: userData.role || '',
+            });
+            setLoading(false);
+        } catch (error) {
+            console.error('Error fetching user data:', error);
+            toast.error('Failed to load user data');
+            setLoading(false);
+        }
+    };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -102,13 +70,60 @@ export default function Profile() {
         }));
     };
 
-    const handleSave = () => {
-        setEditMode(false);
-        // Here you would typically save the changes to your backend
-        console.log('Saving profile changes:', formData);
+    const handlePasswordInputChange = (e) => {
+        const { name, value } = e.target;
+        setPasswordData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleSave = async () => {
+        try {
+            await updateProfileApi(formData);
+            setEditMode(false);
+            toast.success('Profile updated successfully');
+            fetchUserData();
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            toast.error('Failed to update profile');
+        }
+    };
+
+    const handleChangePassword = async () => {
+        try {
+            if (passwordData.newPassword !== passwordData.confirmPassword) {
+                toast.error('New passwords do not match');
+                return;
+            }
+
+            await changePasswordApi({
+                currentPassword: passwordData.currentPassword,
+                newPassword: passwordData.newPassword,
+            });
+
+            setChangePasswordMode(false);
+            setPasswordData({
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: '',
+            });
+            toast.success('Password changed successfully');
+        } catch (error) {
+            console.error('Error changing password:', error);
+            toast.error(error.response?.data?.message || 'Failed to change password');
+        }
     };
 
     const inputClasses = "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm";
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -160,17 +175,26 @@ export default function Profile() {
                                     <p className="text-sm text-gray-500">{formData.email}</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => editMode ? handleSave() : setEditMode(true)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 font-medium"
-                            >
-                                {editMode ? 'Save Changes' : (
-                                    <>
-                                        <PencilIcon className="h-4 w-4" />
-                                        Edit Profile
-                                    </>
-                                )}
-                            </button>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setChangePasswordMode(!changePasswordMode)}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 font-medium"
+                                >
+                                    <KeyIcon className="h-4 w-4" />
+                                    Change Password
+                                </button>
+                                <button
+                                    onClick={() => editMode ? handleSave() : setEditMode(true)}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 font-medium"
+                                >
+                                    {editMode ? 'Save Changes' : (
+                                        <>
+                                            <PencilIcon className="h-4 w-4" />
+                                            Edit Profile
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Personal Information */}
@@ -199,7 +223,7 @@ export default function Profile() {
                                         name="email"
                                         value={formData.email}
                                         onChange={handleInputChange}
-                                        disabled={!editMode}
+                                        disabled={true}
                                         className={inputClasses}
                                     />
                                 </div>
@@ -232,49 +256,89 @@ export default function Profile() {
                             </div>
                         </div>
 
-                        {/* Role & Permissions */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h2 className="text-lg font-medium text-gray-900 mb-6">Role & Permissions</h2>
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Role
-                                    </label>
-                                    <div className="flex items-center gap-2 text-orange-600 bg-orange-50 w-fit px-3 py-1.5 rounded-lg">
-                                        <UserIcon className="h-4 w-4" />
-                                        <span className="text-sm font-medium">{formData.role}</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Permissions
-                                    </label>
-                                    <div className="space-y-2">
-                                        {formData.permissions.map((permission, index) => (
-                                            <div
-                                                key={index}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <svg
-                                                    className="h-5 w-5 text-green-500"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M5 13l4 4L19 7"
-                                                    />
-                                                </svg>
-                                                <span className="text-sm text-gray-600">{permission}</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                        {/* Role Information */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                            <h2 className="text-lg font-medium text-gray-900 mb-6">Role Information</h2>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Role
+                                </label>
+                                <div className="flex items-center gap-2 text-orange-600 bg-orange-50 w-fit px-3 py-1.5 rounded-lg">
+                                    <UserIcon className="h-4 w-4" />
+                                    <span className="text-sm font-medium capitalize">{formData.role}</span>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Change Password */}
+                        {changePasswordMode && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                            >
+                                <h2 className="text-lg font-medium text-gray-900 mb-6">Change Password</h2>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Current Password
+                                        </label>
+                                        <input
+                                            type="password"
+                                            name="currentPassword"
+                                            value={passwordData.currentPassword}
+                                            onChange={handlePasswordInputChange}
+                                            className={inputClasses}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            New Password
+                                        </label>
+                                        <input
+                                            type="password"
+                                            name="newPassword"
+                                            value={passwordData.newPassword}
+                                            onChange={handlePasswordInputChange}
+                                            className={inputClasses}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Confirm New Password
+                                        </label>
+                                        <input
+                                            type="password"
+                                            name="confirmPassword"
+                                            value={passwordData.confirmPassword}
+                                            onChange={handlePasswordInputChange}
+                                            className={inputClasses}
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-4">
+                                        <button
+                                            onClick={() => {
+                                                setChangePasswordMode(false);
+                                                setPasswordData({
+                                                    currentPassword: '',
+                                                    newPassword: '',
+                                                    confirmPassword: '',
+                                                });
+                                            }}
+                                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleChangePassword}
+                                            className="px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg"
+                                        >
+                                            Change Password
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
                 </div>
             </div>
