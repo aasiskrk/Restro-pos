@@ -125,4 +125,121 @@ export const updateAttendanceStatus = async (staffId, status) => {
   return response.data;
 };
 
+// Menu Categories
+export const createCategory = async (data) => {
+  return await axios.post(`${API_URL}/menu/categories`, data);
+};
+
+export const getAllCategories = async () => {
+  return await axios.get(`${API_URL}/menu/categories`);
+};
+
+export const updateCategory = async (id, data) => {
+  return await axios.put(`${API_URL}/menu/categories/${id}`, data);
+};
+
+export const deleteCategory = async (id) => {
+  return await axios.delete(`${API_URL}/menu/categories/${id}`);
+};
+
+// Menu Items
+export const createMenuItem = async (data) => {
+  const formData = new FormData();
+  Object.keys(data).forEach((key) => {
+    if (key === "image" && data[key]) {
+      formData.append("image", data[key]);
+    } else {
+      formData.append(key, data[key]);
+    }
+  });
+  return await axios.post(`${API_URL}/menu/items`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+export const getAllMenuItems = async () => {
+  return await axios.get(`${API_URL}/menu/items`);
+};
+
+export const getMenuItemsByCategory = async (categoryId) => {
+  return await axios.get(`${API_URL}/menu/items/category/${categoryId}`);
+};
+
+export const updateMenuItem = async (id, formData) => {
+  return await axios.put(`${API_URL}/menu/items/${id}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+export const deleteMenuItem = async (id) => {
+  return await axios.delete(`${API_URL}/menu/items/${id}`);
+};
+
+// Table APIs
+export const createTable = async (data) => {
+  return await axios.post(`${API_URL}/table`, data);
+};
+
+export const getAllTables = async () => {
+  return await axios.get(`${API_URL}/table`);
+};
+
+export const updateTable = async (id, data) => {
+  return await axios.put(`${API_URL}/table/${id}`, data);
+};
+
+export const deleteTable = async (id) => {
+  return await axios.delete(`${API_URL}/table/${id}`);
+};
+
+export const updateTableStatus = async (tableId, status) => {
+  try {
+    const response = await axios.patch(
+      `${API_URL}/table/${tableId}/status`,
+      status
+    );
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Order APIs
+export const createOrder = async (data) => {
+  return await axios.post(`${API_URL}/order`, data);
+};
+
+export const getAllOrders = async () => {
+  return await axios.get(`${API_URL}/order`);
+};
+
+export const getActiveOrders = async () => {
+  return await axios.get(`${API_URL}/order/active`);
+};
+
+export const getOrdersByTable = async (tableId) => {
+  return await axios.get(`${API_URL}/order/table/${tableId}`);
+};
+
+export const updateOrderStatus = async (id, status) => {
+  return await axios.patch(`${API_URL}/order/${id}/status`, { status });
+};
+
+export const addItemsToOrder = async (id, items) => {
+  return await axios.post(`${API_URL}/order/${id}/items`, { items });
+};
+
+export const updateOrder = async (orderId, orderData) => {
+  try {
+    const response = await axios.put(`${API_URL}/order/${orderId}`, orderData);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export default Api;
