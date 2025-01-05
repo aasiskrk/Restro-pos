@@ -1,23 +1,28 @@
-const router = require("express").Router();
-const menuController = require("../controllers/menuController");
-const { authGuard, adminGuard } = require("../middleware/authGuard");
+const express = require("express");
+const router = express.Router();
+const {
+  createCategory,
+  getAllCategories,
+  updateCategory,
+  deleteCategory,
+  createMenuItem,
+  getAllMenuItems,
+  getMenuItemsByCategory,
+  updateMenuItem,
+  deleteMenuItem,
+} = require("../controllers/menuController");
 
-// Create menu item (admin only)
-router.post("/create", adminGuard, menuController.createMenuItem);
+// Category routes
+router.post("/categories", createCategory);
+router.get("/categories", getAllCategories);
+router.put("/categories/:id", updateCategory);
+router.delete("/categories/:id", deleteCategory);
 
-// Get all menu items
-router.get("/all", menuController.getAllMenuItems);
-
-// Get menu items by category
-router.get("/category/:category", menuController.getMenuItemsByCategory);
-
-// Update menu item (admin only)
-router.put("/update/:id", adminGuard, menuController.updateMenuItem);
-
-// Delete menu item (admin only)
-router.delete("/delete/:id", adminGuard, menuController.deleteMenuItem);
-
-// Toggle menu item availability (admin only)
-router.patch("/toggle/:id", adminGuard, menuController.toggleAvailability);
+// Menu item routes
+router.post("/items", createMenuItem);
+router.get("/items", getAllMenuItems);
+router.get("/items/category/:categoryId", getMenuItemsByCategory);
+router.put("/items/:id", updateMenuItem);
+router.delete("/items/:id", deleteMenuItem);
 
 module.exports = router;

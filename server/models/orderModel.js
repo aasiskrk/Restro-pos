@@ -11,45 +11,38 @@ const orderItemSchema = new mongoose.Schema({
     required: true,
     min: 1,
   },
-  specialInstructions: {
-    type: String,
+  price: {
+    type: Number,
+    required: true,
   },
-  status: {
+  notes: {
     type: String,
-    enum: ["pending", "preparing", "ready", "served", "cancelled"],
-    default: "pending",
   },
 });
 
 const orderSchema = new mongoose.Schema({
-  tableNumber: {
-    type: Number,
+  table: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Table",
     required: true,
   },
   items: [orderItemSchema],
   status: {
     type: String,
-    enum: ["active", "completed", "cancelled"],
-    default: "active",
+    enum: ["pending", "in-progress", "completed", "cancelled"],
+    default: "pending",
   },
-  totalAmount: {
+  subtotal: {
     type: Number,
     required: true,
   },
-  server: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+  tax: {
+    type: Number,
     required: true,
   },
-  paymentStatus: {
-    type: String,
-    enum: ["pending", "paid", "refunded"],
-    default: "pending",
-  },
-  paymentMethod: {
-    type: String,
-    enum: ["cash", "card", "mobile"],
-    required: false,
+  total: {
+    type: Number,
+    required: true,
   },
   createdAt: {
     type: Date,

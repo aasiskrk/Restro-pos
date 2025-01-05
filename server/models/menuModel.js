@@ -1,5 +1,25 @@
 const mongoose = require("mongoose");
 
+const categorySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  description: {
+    type: String,
+    required: false,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const menuItemSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -14,21 +34,22 @@ const menuItemSchema = new mongoose.Schema({
     required: true,
   },
   category: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Category",
     required: true,
-    enum: ["appetizer", "main", "dessert", "beverage"],
   },
   image: {
     type: String,
     required: false,
   },
+  stock: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
   isAvailable: {
     type: Boolean,
     default: true,
-  },
-  preparationTime: {
-    type: Number, // in minutes
-    required: true,
   },
   createdAt: {
     type: Date,
@@ -40,5 +61,7 @@ const menuItemSchema = new mongoose.Schema({
   },
 });
 
+const Category = mongoose.model("Category", categorySchema);
 const MenuItem = mongoose.model("MenuItem", menuItemSchema);
-module.exports = MenuItem;
+
+module.exports = { Category, MenuItem };

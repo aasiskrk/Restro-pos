@@ -1,38 +1,21 @@
 const mongoose = require("mongoose");
 
 const tableSchema = new mongoose.Schema({
-  tableNumber: {
+  number: {
     type: Number,
-    required: true,
+    required: [true, "Table number is required"],
     unique: true,
+    min: [1, "Table number must be greater than 0"],
   },
-  capacity: {
+  seats: {
     type: Number,
-    required: true,
+    required: [true, "Number of seats is required"],
+    min: [1, "Number of seats must be greater than 0"],
   },
   status: {
     type: String,
-    enum: ["available", "occupied", "reserved", "maintenance"],
+    enum: ["available", "occupied"],
     default: "available",
-  },
-  currentOrder: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Order",
-    default: null,
-  },
-  section: {
-    type: String,
-    required: true,
-    enum: ["indoor", "outdoor", "private"],
-  },
-  assignedServer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    default: null,
-  },
-  isActive: {
-    type: Boolean,
-    default: true,
   },
   createdAt: {
     type: Date,
@@ -44,5 +27,14 @@ const tableSchema = new mongoose.Schema({
   },
 });
 
+// Remove old indexes and create a new one
+tableSchema.index({ number: 1 }, { unique: true, name: "number_1" });
+
 const Table = mongoose.model("Table", tableSchema);
+
+// Drop existing indexes and create new ones
+Table.collection
+  .dropIndexes()
+  .catch((err) => console.log("No indexes to drop"));
+
 module.exports = Table;

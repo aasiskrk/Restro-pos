@@ -1,17 +1,52 @@
 const Table = require("../models/tableModel");
+const Order = require("../models/orderModel");
 
-// Create new table
-exports.createTable = async (req, res) => {
+// Create table
+const createTable = async (req, res) => {
+  const { number, seats } = req.body;
+
   try {
-    const { tableNumber, capacity, section } = req.body;
+    // Validate required fields
+    if (!number || !seats) {
+      return res.status(400).json({
+        success: false,
+        message: "Table number and seats are required",
+      });
+    }
 
-    const table = await Table.create({
-      tableNumber,
-      capacity,
-      section,
-      status: "available",
-      restaurant: req.user.restaurant,
+    // Convert to numbers and validate
+    const tableNumber = Number(number);
+    const seatCount = Number(seats);
+
+    if (isNaN(tableNumber) || tableNumber < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid table number. Must be a positive number.",
+      });
+    }
+
+    if (isNaN(seatCount) || seatCount < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid seat count. Must be a positive number.",
+      });
+    }
+
+    // Check if table number already exists
+    const existingTable = await Table.findOne({ number: tableNumber });
+    if (existingTable) {
+      return res.status(400).json({
+        success: false,
+        message: `Table number ${tableNumber} already exists`,
+      });
+    }
+
+    const table = new Table({
+      number: tableNumber,
+      seats: seatCount,
     });
+
+    await table.save();
 
     res.status(201).json({
       success: true,
@@ -19,84 +54,64 @@ exports.createTable = async (req, res) => {
       table,
     });
   } catch (error) {
-    console.error("Create table error:", error);
+    console.error("Error creating table:", error);
+    // Check for duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: `Table number ${number} already exists`,
+      });
+    }
     res.status(500).json({
       success: false,
-      message: "Error creating table",
+      message: "Error creating table. Please try again.",
       error: error.message,
     });
   }
 };
 
 // Get all tables
-exports.getAllTables = async (req, res) => {
+const getAllTables = async (req, res) => {
   try {
-    const tables = await Table.find({ restaurant: req.user.restaurant })
-      .populate("currentOrder")
-      .sort("tableNumber");
-
+    const tables = await Table.find({}).sort({ number: 1 });
     res.status(200).json({
       success: true,
-      count: tables.length,
       tables,
     });
   } catch (error) {
-    console.error("Get all tables error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
-      message: "Error getting tables",
-      error: error.message,
-    });
-  }
-};
-
-// Get table by ID
-exports.getTableById = async (req, res) => {
-  try {
-    const table = await Table.findOne({
-      _id: req.params.id,
-      restaurant: req.user.restaurant,
-    }).populate("currentOrder");
-
-    if (!table) {
-      return res.status(404).json({
-        success: false,
-        message: "Table not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      table,
-    });
-  } catch (error) {
-    console.error("Get table error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error getting table",
-      error: error.message,
+      message: "Internal server error",
     });
   }
 };
 
 // Update table
-exports.updateTable = async (req, res) => {
-  try {
-    const { tableNumber, capacity, section } = req.body;
+const updateTable = async (req, res) => {
+  const { id } = req.params;
+  const updateData = req.body;
 
-    const table = await Table.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        restaurant: req.user.restaurant,
-      },
-      {
-        tableNumber,
-        capacity,
-        section,
-        updatedAt: Date.now(),
-      },
+  try {
+    // If updating table number, check if it already exists
+    if (updateData.number) {
+      const existingTable = await Table.findOne({
+        number: updateData.number,
+        _id: { $ne: id },
+      });
+      if (existingTable) {
+        return res.status(400).json({
+          success: false,
+          message: "Table number already exists",
+        });
+      }
+    }
+
+    const table = await Table.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: Date.now() },
       { new: true }
-    ).populate("currentOrder");
+    );
 
     if (!table) {
       return res.status(404).json({
@@ -111,22 +126,33 @@ exports.updateTable = async (req, res) => {
       table,
     });
   } catch (error) {
-    console.error("Update table error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
-      message: "Error updating table",
-      error: error.message,
+      message: "Internal server error",
     });
   }
 };
 
 // Delete table
-exports.deleteTable = async (req, res) => {
+const deleteTable = async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const table = await Table.findOneAndDelete({
-      _id: req.params.id,
-      restaurant: req.user.restaurant,
+    // Check if table has active orders
+    const activeOrder = await Order.findOne({
+      table: id,
+      status: { $in: ["pending", "in-progress"] },
     });
+
+    if (activeOrder) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete table with active orders",
+      });
+    }
+
+    const table = await Table.findByIdAndDelete(id);
 
     if (!table) {
       return res.status(404).json({
@@ -140,99 +166,32 @@ exports.deleteTable = async (req, res) => {
       message: "Table deleted successfully",
     });
   } catch (error) {
-    console.error("Delete table error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
-      message: "Error deleting table",
-      error: error.message,
-    });
-  }
-};
-
-// Get available tables
-exports.getAvailableTables = async (req, res) => {
-  try {
-    const tables = await Table.find({
-      restaurant: req.user.restaurant,
-      status: "available",
-    }).sort("tableNumber");
-
-    res.status(200).json({
-      success: true,
-      count: tables.length,
-      tables,
-    });
-  } catch (error) {
-    console.error("Get available tables error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error getting available tables",
-      error: error.message,
-    });
-  }
-};
-
-// Get occupied tables
-exports.getOccupiedTables = async (req, res) => {
-  try {
-    const tables = await Table.find({
-      restaurant: req.user.restaurant,
-      status: "occupied",
-    })
-      .populate("currentOrder")
-      .sort("tableNumber");
-
-    res.status(200).json({
-      success: true,
-      count: tables.length,
-      tables,
-    });
-  } catch (error) {
-    console.error("Get occupied tables error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error getting occupied tables",
-      error: error.message,
+      message: "Internal server error",
     });
   }
 };
 
 // Update table status
-exports.updateTableStatus = async (req, res) => {
+const updateTableStatus = async (req, res) => {
   try {
-    const { status, orderId } = req.body;
-    const validStatuses = ["available", "occupied", "reserved", "maintenance"];
+    const { tableId } = req.params;
+    const { status } = req.body;
 
-    if (!validStatuses.includes(status)) {
+    if (!tableId || !status) {
       return res.status(400).json({
         success: false,
-        message: "Invalid table status",
+        message: "Table ID and status are required",
       });
     }
 
-    const updateData = {
-      status,
-      updatedAt: Date.now(),
-    };
-
-    // If status is occupied, add the order reference
-    if (status === "occupied" && orderId) {
-      updateData.currentOrder = orderId;
-    }
-
-    // If status is available, remove the order reference
-    if (status === "available") {
-      updateData.currentOrder = null;
-    }
-
-    const table = await Table.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        restaurant: req.user.restaurant,
-      },
-      updateData,
+    const table = await Table.findByIdAndUpdate(
+      tableId,
+      { status, updatedAt: Date.now() },
       { new: true }
-    ).populate("currentOrder");
+    );
 
     if (!table) {
       return res.status(404).json({
@@ -247,11 +206,18 @@ exports.updateTableStatus = async (req, res) => {
       table,
     });
   } catch (error) {
-    console.error("Update table status error:", error);
+    console.error("Error updating table status:", error);
     res.status(500).json({
       success: false,
       message: "Error updating table status",
-      error: error.message,
     });
   }
+};
+
+module.exports = {
+  createTable,
+  getAllTables,
+  updateTable,
+  deleteTable,
+  updateTableStatus,
 };
