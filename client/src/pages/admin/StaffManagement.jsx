@@ -21,6 +21,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Input, Select, Button } from '../../components/common/Form';
 import DashboardLayout from '../../components/admin/DashboardLayout';
 import * as api from '../../apis/api';
+import { showToast, handleApiError } from '../../utils/toast';
 
 const staffStatusColors = {
     present: 'bg-green-100 text-green-800',
@@ -41,8 +42,6 @@ const navigation = [
     { name: 'Staff Management', icon: UsersIconOutline, href: '/admin/staff', current: true },
     { name: 'Menu Management', icon: ClipboardDocumentListIcon, href: '/admin/menu', current: false },
     { name: 'Orders & Tables', icon: TableCellsIcon, href: '/admin/orders', current: false },
-    { name: 'Inventory', icon: CubeIcon, href: '/admin/inventory', current: false },
-    { name: 'Audit Logs', icon: ClipboardDocumentListIcon, href: '/admin/audit-logs', current: false },
     { name: 'Settings', icon: Cog6ToothIcon, href: '/admin/settings', current: false },
 ];
 
@@ -426,6 +425,16 @@ export default function StaffManagement() {
                 </Dialog>
             </Transition>
         );
+    };
+
+    const handleAddStaff = async (staffData) => {
+        try {
+            const response = await api.createStaff(staffData);
+            showToast.success('Staff member added successfully');
+            // Update state/UI
+        } catch (error) {
+            handleApiError(error);
+        }
     };
 
     return (
