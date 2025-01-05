@@ -5,7 +5,6 @@ import Dashboard from './pages/admin/Dashboard';
 import StaffManagement from './pages/admin/StaffManagement';
 import MenuManagement from './pages/admin/MenuManagement';
 import OrdersAndTables from './pages/admin/OrdersAndTables';
-import Inventory from './pages/admin/Inventory';
 import Settings from './pages/admin/Settings';
 import ServerInterface from './pages/server/ServerInterface';
 import TablesAndOrders from './pages/server/TablesAndOrders';
@@ -17,11 +16,11 @@ import KitchenInterface from './pages/kitchen/KitchenInterface';
 import Signup from './pages/Signup';
 import { ThemeProvider } from './context/ThemeContext';
 import PaymentHistory from './pages/cashier/PaymentHistory';
-import InventoryAlert from './pages/kitchen/InventoryAlert';
 import Profile from './pages/Profile';
 import ProfileSettings from './pages/Settings';
-import AuditLogs from './pages/admin/AuditLogs';
 import AdminSetup from './pages/AdminSetup';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   return (
@@ -39,8 +38,6 @@ function App() {
           <Route path="/admin/staff" element={<StaffManagement />} />
           <Route path="/admin/menu" element={<MenuManagement />} />
           <Route path="/admin/orders" element={<OrdersAndTables />} />
-          <Route path="/admin/inventory" element={<Inventory />} />
-          <Route path="/admin/audit-logs" element={<AuditLogs />} />
           <Route path="/admin/settings" element={<Settings />} />
 
           {/* Role-based Routes */}
@@ -52,13 +49,13 @@ function App() {
           <Route path="/cashier/checkout" element={<Checkout />} />
           <Route path="/cashier/history" element={<PaymentHistory />} />
           <Route path="/kitchen" element={<KitchenInterface />} />
-          <Route path="/kitchen/inventory" element={<InventoryAlert />} />
 
           {/* Common Routes (accessible by all roles) */}
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/settings" element={<ProfileSettings />} />
         </Routes>
       </Router>
+      <ToastContainer />
     </ThemeProvider>
   );
 }
