@@ -8,6 +8,10 @@ const staffRoutes = require("./routes/staffRoutes");
 const errorHandler = require("./middleware/errorMiddleware");
 const AppError = require("./utils/appError");
 const path = require("path");
+const menuRoutes = require("./routes/menuRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const tableRoutes = require("./routes/tableRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 // Creating an express app
 const app = express();
@@ -56,10 +60,11 @@ const PORT = process.env.PORT || 5000;
 // Configuring routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
-app.use("/api/menu", require("./routes/menuRoutes"));
-app.use("/api/table", require("./routes/tableRoutes"));
-app.use("/api/order", require("./routes/orderRoutes"));
+app.use("/api/menu", menuRoutes);
+app.use("/api/table", tableRoutes);
+app.use("/api/order", orderRoutes);
 app.use("/api/staff", staffRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Serve static files from the public directory
 app.use("/menu", express.static(path.join(__dirname, "public/menu")));
