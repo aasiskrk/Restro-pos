@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useRef, useEffect } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { motion } from 'framer-motion';
 import {
@@ -11,7 +11,10 @@ import {
 } from '@heroicons/react/24/outline';
 import { BellIcon as BellIconSolid } from '@heroicons/react/24/solid';
 import { Link, useNavigate } from 'react-router-dom';
-import { logout } from '../../apis/api';
+import { logout, getDashboardStats } from '../../apis/api';
+
+// iOS notification sound URL
+const NOTIFICATION_SOUND_URL = 'https://notificationsounds.com/storage/sounds/file-sounds-1217-relax.ogg';
 
 function classNames(...classes) {
     return classes.filter(Boolean).join(' ');
@@ -19,15 +22,121 @@ function classNames(...classes) {
 
 export default function Header({ onToggleSidebar }) {
     const navigate = useNavigate();
-    const [notifications] = useState([
-        { id: 1, text: 'New order #123 received', unread: true },
-        { id: 2, text: 'Low stock alert: Chicken Wings', unread: true },
-        { id: 3, text: 'Staff schedule updated', unread: false },
-    ]);
+    const notificationButtonRef = useRef(null);
+    const notificationSound = useRef(new Audio(NOTIFICATION_SOUND_URL));
+    const [notifications, setNotifications] = useState([]);
+    const [hasUnread, setHasUnread] = useState(false);
+    const [lastNotificationCount, setLastNotificationCount] = useState(0);
+
+    // Function to play notification sound
+    const playNotificationSound = () => {
+        notificationSound.current.play().catch(error => {
+            console.error('Error playing notification sound:', error);
+        });
+    };
+
+    // Fetch low stock items for notifications
+    const fetchLowStockNotifications = async () => {
+        try {
+            const response = await getDashboardStats();
+            if (response.data && response.data.data) {
+                const { lowStockItems = [] } = response.data.data;
+
+                // Create notifications for low stock items
+                const newNotifications = lowStockItems.map(item => ({
+                    id: item._id,
+                    text: `Low stock alert: ${item.name} (${item.stock} remaining)`,
+                    unread: true,
+                    type: 'low-stock',
+                    onClick: () => navigate('/admin/menu')  // Navigate to menu management when clicked
+                }));
+
+                // Check if there are new notifications
+                if (newNotifications.length > lastNotificationCount && lastNotificationCount !== 0) {
+                    // Play sound only if there are new notifications
+                    playNotificationSound();
+
+                    // Show browser notification if permitted
+                    if (Notification.permission === 'granted') {
+                        const newItems = newNotifications.slice(lastNotificationCount);
+                        newItems.forEach(item => {
+                            new Notification('Low Stock Alert', {
+                                body: item.text,
+                                icon: '/favicon.ico'
+                            });
+                        });
+                    }
+                }
+
+                setLastNotificationCount(newNotifications.length);
+                setNotifications(newNotifications);
+                setHasUnread(newNotifications.some(n => n.unread));
+
+                // Log for debugging
+                console.log('Low stock items found:', lowStockItems.length);
+                console.log('Notifications set:', newNotifications);
+            }
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+        }
+    };
+
+    // Request notification permission on component mount
+    useEffect(() => {
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchLowStockNotifications();
+        // Refresh notifications every 15 seconds
+        const interval = setInterval(fetchLowStockNotifications, 15000);
+
+        // Add listener for immediate notification checks
+        const handleCheckNotifications = () => {
+            fetchLowStockNotifications();
+        };
+        document.addEventListener('checkNotifications', handleCheckNotifications);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('checkNotifications', handleCheckNotifications);
+        };
+    }, [navigate]);
+
+    useEffect(() => {
+        const handleOpenNotifications = () => {
+            if (notificationButtonRef.current) {
+                notificationButtonRef.current.click();
+            }
+        };
+
+        document.addEventListener('openNotifications', handleOpenNotifications);
+        return () => {
+            document.removeEventListener('openNotifications', handleOpenNotifications);
+        };
+    }, []);
 
     const handleLogout = () => {
         logout();
         navigate('/');
+    };
+
+    const markAsRead = (notification) => {
+        setNotifications(prevNotifications =>
+            prevNotifications.map(n =>
+                n.id === notification.id
+                    ? { ...n, unread: false }
+                    : n
+            )
+        );
+        setHasUnread(notifications.some(n => n.id !== notification.id && n.unread));
+
+        // Navigate if onClick handler exists
+        if (notification.onClick) {
+            notification.onClick();
+        }
     };
 
     const userNavigation = [
@@ -82,13 +191,16 @@ export default function Header({ onToggleSidebar }) {
                         {/* Notifications */}
                         <Menu as="div" className="relative">
                             <motion.div whileHover={{ scale: 1.05 }}>
-                                <Menu.Button className="relative flex rounded-full p-1.5 text-gray-400 hover:text-orange-500">
-                                    {notifications.some(n => n.unread) ? (
+                                <Menu.Button
+                                    ref={notificationButtonRef}
+                                    className="relative flex rounded-full p-1.5 text-gray-400 hover:text-orange-500"
+                                >
+                                    {hasUnread ? (
                                         <BellIconSolid className="h-6 w-6 text-orange-500" />
                                     ) : (
                                         <BellIcon className="h-6 w-6" />
                                     )}
-                                    {notifications.some(n => n.unread) && (
+                                    {hasUnread && (
                                         <motion.span
                                             initial={{ scale: 0 }}
                                             animate={{ scale: 1 }}
@@ -108,23 +220,38 @@ export default function Header({ onToggleSidebar }) {
                                 leaveTo="transform opacity-0 scale-95"
                             >
                                 <Menu.Items className="absolute right-0 z-10 mt-2 w-80 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                    {notifications.map((notification) => (
-                                        <Menu.Item key={notification.id}>
-                                            {({ active }) => (
-                                                <motion.div
-                                                    whileHover={{ x: 4 }}
-                                                    className={classNames(
-                                                        active ? 'bg-gray-50' : '',
-                                                        'px-4 py-2 cursor-pointer'
-                                                    )}
-                                                >
-                                                    <p className={`text-sm ${notification.unread ? 'font-medium' : ''}`}>
-                                                        {notification.text}
-                                                    </p>
-                                                </motion.div>
-                                            )}
-                                        </Menu.Item>
-                                    ))}
+                                    {notifications.length > 0 ? (
+                                        notifications.map((notification) => (
+                                            <Menu.Item key={notification.id}>
+                                                {({ active }) => (
+                                                    <motion.div
+                                                        whileHover={{ x: 4 }}
+                                                        className={classNames(
+                                                            active ? 'bg-gray-50' : '',
+                                                            'px-4 py-3 cursor-pointer'
+                                                        )}
+                                                        onClick={() => markAsRead(notification)}
+                                                    >
+                                                        <div className="flex items-start">
+                                                            <div className={`w-2 h-2 mt-2 mr-2 rounded-full ${notification.unread ? 'bg-orange-500' : 'bg-gray-200'}`} />
+                                                            <div>
+                                                                <p className={`text-sm ${notification.unread ? 'font-medium' : ''} text-gray-900`}>
+                                                                    {notification.text}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500 mt-1">
+                                                                    Click to view in Menu Management
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </Menu.Item>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                                            No notifications
+                                        </div>
+                                    )}
                                 </Menu.Items>
                             </Transition>
                         </Menu>

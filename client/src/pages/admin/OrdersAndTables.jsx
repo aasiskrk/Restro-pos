@@ -995,6 +995,12 @@ export default function OrdersAndTables() {
                         })
                     );
                 }
+
+                // If order is completed, trigger notification check for low stock
+                if (status === 'completed') {
+                    // Trigger notification check for low stock items
+                    document.dispatchEvent(new Event('checkNotifications'));
+                }
             } else {
                 showToast.success('Order status updated successfully');
             }

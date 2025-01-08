@@ -242,4 +242,16 @@ export const updateOrder = async (orderId, orderData) => {
   }
 };
 
+// Dashboard APIs
+export const getDashboardStats = async (timeRange = "today") => {
+  try {
+    const response = await Api.get(`/dashboard/stats?timeRange=${timeRange}`);
+    console.log("Dashboard API Response:", response.data);
+    return response;
+  } catch (error) {
+    console.error("Dashboard API Error:", error);
+    throw error;
+  }
+};
+
 export default Api;
