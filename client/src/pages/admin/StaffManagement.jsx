@@ -364,7 +364,7 @@ export default function StaffManagement() {
                                             <div className="h-32 w-32 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden">
                                                 {staff.profilePicture ? (
                                                     <img
-                                                        src={`${import.meta.env.VITE_API_URL}${staff.profilePicture}`}
+                                                        src={`${import.meta.env.VITE_API_URL}/staff/${staff.profilePicture}`}
                                                         alt={staff.fullName}
                                                         className="h-full w-full object-cover"
                                                     />
@@ -522,7 +522,7 @@ export default function StaffManagement() {
                                                     <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden">
                                                         {staff.profilePicture ? (
                                                             <img
-                                                                src={`${import.meta.env.VITE_API_URL}${staff.profilePicture}`}
+                                                                src={`${import.meta.env.VITE_API_URL}/staff/${staff.profilePicture}`}
                                                                 alt={staff.fullName}
                                                                 className="h-full w-full object-cover"
                                                             />
@@ -621,7 +621,7 @@ export default function StaffManagement() {
                                                             <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden">
                                                                 {staff.profilePicture ? (
                                                                     <img
-                                                                        src={`${import.meta.env.VITE_API_URL}${staff.profilePicture}`}
+                                                                        src={`${import.meta.env.VITE_API_URL}/staff/${staff.profilePicture}`}
                                                                         alt={staff.fullName}
                                                                         className="h-full w-full object-cover"
                                                                     />

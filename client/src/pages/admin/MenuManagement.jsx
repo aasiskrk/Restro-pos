@@ -528,7 +528,7 @@ function EditMenuItemPanel({ item, onClose, onSave, categories }) {
                                                 />
                                             ) : item.image ? (
                                                 <img
-                                                    src={`/menu/${item.image}`}
+                                                    src={`${import.meta.env.VITE_API_URL}/menu/${item.image}`}
                                                     alt={item.name}
                                                     className="w-full h-full object-cover rounded-lg"
                                                 />
@@ -884,7 +884,7 @@ export default function MenuManagement() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center">
                                                 <img
-                                                    src={item.image ? `/menu/${item.image}` : '/placeholder-image.jpg'}
+                                                    src={item.image ? `${import.meta.env.VITE_API_URL}/menu/${item.image}` : '/placeholder-image.jpg'}
                                                     alt={item.name}
                                                     className="h-12 w-12 rounded-lg object-cover"
                                                 />

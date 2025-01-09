@@ -4,16 +4,10 @@ import {
     BuildingStorefrontIcon,
     CameraIcon,
     BellIcon,
-    KeyIcon,
-    UserCircleIcon,
-    CreditCardIcon,
-    DocumentTextIcon,
-    GlobeAltIcon,
     ChartBarIcon,
     UsersIcon,
     ClipboardDocumentListIcon,
     TableCellsIcon,
-    CubeIcon,
     Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 import DashboardLayout from '../../components/admin/DashboardLayout';
@@ -40,33 +34,35 @@ const settingsSections = [
         id: 'notifications',
         name: 'Notifications',
         icon: BellIcon,
-        description: 'Configure how you receive alerts and notifications'
-    },
-    {
-        id: 'security',
-        name: 'Security',
-        icon: KeyIcon,
-        description: 'Manage account security and authentication'
-    },
-    {
-        id: 'billing',
-        name: 'Billing & Subscription',
-        icon: CreditCardIcon,
-        description: 'Manage your subscription and payment methods'
-    },
-    {
-        id: 'team',
-        name: 'Team Management',
-        icon: UserCircleIcon,
-        description: 'Configure team roles and permissions'
-    },
-    {
-        id: 'integrations',
-        name: 'Integrations',
-        icon: GlobeAltIcon,
-        description: 'Connect with third-party services and apps'
+        description: 'Configure notification preferences and alerts'
     }
 ];
+
+const defaultNotificationSettings = {
+    settings: [
+        {
+            id: 'low_stock_alerts',
+            label: 'Low Stock Alerts',
+            type: 'toggle',
+            value: true,
+            description: 'Get notified when items are running low on stock'
+        },
+        {
+            id: 'order_updates',
+            label: 'Order Updates',
+            type: 'toggle',
+            value: true,
+            description: 'Notifications for new and updated orders'
+        },
+        {
+            id: 'sound_enabled',
+            label: 'Notification Sound',
+            type: 'toggle',
+            value: true,
+            description: 'Play sound when new notifications arrive'
+        }
+    ]
+};
 
 export default function Settings() {
     const [activeSection, setActiveSection] = useState('restaurant');
@@ -79,8 +75,36 @@ export default function Settings() {
         email: '',
         phone: '',
         address: '',
-        logo: null
+        logo: null,
+        type: '',
+        size: ''
     });
+
+    const [notificationSettings, setNotificationSettings] = useState(() => {
+        const savedSettings = localStorage.getItem('notificationSettings');
+        return savedSettings ? JSON.parse(savedSettings) : defaultNotificationSettings;
+    });
+
+    // Save notification settings to localStorage whenever they change
+    useEffect(() => {
+        localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
+        // Dispatch event to update notification settings across the app
+        document.dispatchEvent(new CustomEvent('notificationSettingsChanged', {
+            detail: notificationSettings
+        }));
+    }, [notificationSettings]);
+
+    const handleNotificationSettingChange = (settingId, newValue) => {
+        setNotificationSettings(prevSettings => ({
+            ...prevSettings,
+            settings: prevSettings.settings.map(setting => {
+                if (setting.id === settingId) {
+                    return { ...setting, value: newValue };
+                }
+                return setting;
+            })
+        }));
+    };
 
     // Fetch restaurant details
     useEffect(() => {
@@ -92,7 +116,6 @@ export default function Settings() {
             setIsLoading(true);
             setError(null);
             const response = await getRestaurantDetailsApi();
-            console.log('Fetched restaurant data:', response.data); // Debug log
 
             if (response.data.restaurant) {
                 setRestaurantData({
@@ -101,13 +124,14 @@ export default function Settings() {
                     email: response.data.restaurant.email || '',
                     phone: response.data.restaurant.phone || '',
                     address: response.data.restaurant.address || '',
-                    logo: response.data.restaurant.logo || null
+                    logo: response.data.restaurant.logo || null,
+                    type: response.data.restaurant.type || '',
+                    size: response.data.restaurant.size || ''
                 });
             } else {
                 setError('No restaurant data found');
             }
         } catch (err) {
-            console.log('Fetch error details:', err.response?.data); // Debug log
             setError('Failed to fetch restaurant details');
             toast.error('Failed to fetch restaurant details');
             console.error('Fetch restaurant details error:', err);
@@ -118,19 +142,17 @@ export default function Settings() {
 
     const handleSave = async () => {
         try {
-            // Create update data with empty strings instead of undefined
             const updateData = {
                 restaurantName: restaurantData.name,
                 ownerName: restaurantData.ownerName,
                 email: restaurantData.email,
                 phone: restaurantData.phone,
-                address: restaurantData.address
+                address: restaurantData.address,
+                type: restaurantData.type,
+                size: restaurantData.size
             };
 
-            console.log('Sending update data:', updateData); // Debug log
-
             const response = await updateRestaurantDetailsApi(updateData);
-            console.log('Response:', response); // Debug log
 
             if (response.data.success) {
                 toast.success('Restaurant details updated successfully');
@@ -140,11 +162,29 @@ export default function Settings() {
                 toast.error(response.data.message || 'Failed to update restaurant details');
             }
         } catch (err) {
-            console.log('Error details:', err.response?.data); // Debug log
             toast.error(err.response?.data?.message || 'Failed to update restaurant details');
             console.error('Update restaurant details error:', err);
         }
     };
+
+    const restaurantTypes = [
+        { value: 'restaurant', label: 'Restaurant' },
+        { value: 'cafe', label: 'Café' },
+        { value: 'bar', label: 'Bar & Grill' },
+        { value: 'fastfood', label: 'Fast Food' },
+        { value: 'teahouse', label: 'Tea House' },
+        { value: 'bakery', label: 'Bakery' },
+        { value: 'pizzeria', label: 'Pizzeria' },
+        { value: 'buffet', label: 'Buffet' },
+        { value: 'foodtruck', label: 'Food Truck' }
+    ];
+
+    const restaurantSizes = [
+        { value: 'small', label: 'Small (up to 50 seats)' },
+        { value: 'medium', label: 'Medium (51-150 seats)' },
+        { value: 'large', label: 'Large (151-300 seats)' },
+        { value: 'xlarge', label: 'Extra Large (300+ seats)' }
+    ];
 
     return (
         <DashboardLayout navigation={navigation}>
@@ -268,6 +308,38 @@ export default function Settings() {
                                                     disabled={!isEditing}
                                                     required
                                                 />
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">Restaurant Type</label>
+                                                    <select
+                                                        value={restaurantData.type}
+                                                        onChange={(e) => setRestaurantData({ ...restaurantData, type: e.target.value })}
+                                                        disabled={!isEditing}
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                    >
+                                                        <option value="">Select Type</option>
+                                                        {restaurantTypes.map(type => (
+                                                            <option key={type.value} value={type.value}>
+                                                                {type.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">Restaurant Size</label>
+                                                    <select
+                                                        value={restaurantData.size}
+                                                        onChange={(e) => setRestaurantData({ ...restaurantData, size: e.target.value })}
+                                                        disabled={!isEditing}
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                    >
+                                                        <option value="">Select Size</option>
+                                                        {restaurantSizes.map(size => (
+                                                            <option key={size.value} value={size.value}>
+                                                                {size.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                                 <div className="sm:col-span-2">
                                                     <Input
                                                         label="Address"
@@ -292,7 +364,50 @@ export default function Settings() {
                             </div>
                         )}
 
-                        {/* Add other section content here */}
+                        {activeSection === 'notifications' && (
+                            <div className="bg-white rounded-2xl shadow-sm">
+                                <div className="px-6 py-4 border-b border-gray-200">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-lg font-semibold text-gray-900">Notification Settings</h2>
+                                            <p className="mt-1 text-sm text-gray-500">Configure how you receive notifications</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-6">
+                                    <div className="space-y-6">
+                                        {notificationSettings.settings.map((setting) => (
+                                            <div
+                                                key={setting.id}
+                                                className="flex flex-col space-y-2"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <label className="text-sm font-medium text-gray-900">
+                                                            {setting.label}
+                                                        </label>
+                                                        <p className="text-sm text-gray-500">
+                                                            {setting.description}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleNotificationSettingChange(setting.id, !setting.value)}
+                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${setting.value ? 'bg-orange-500' : 'bg-gray-200'
+                                                            }`}
+                                                    >
+                                                        <span
+                                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${setting.value ? 'translate-x-6' : 'translate-x-1'
+                                                                }`}
+                                                        />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
