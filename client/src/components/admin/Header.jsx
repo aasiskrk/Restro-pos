@@ -6,7 +6,6 @@ import {
     UserCircleIcon,
     Cog6ToothIcon,
     ArrowRightOnRectangleIcon,
-    MagnifyingGlassIcon,
     Bars3Icon,
 } from '@heroicons/react/24/outline';
 import { BellIcon as BellIconSolid } from '@heroicons/react/24/solid';
@@ -27,17 +26,49 @@ export default function Header({ onToggleSidebar }) {
     const [notifications, setNotifications] = useState([]);
     const [hasUnread, setHasUnread] = useState(false);
     const [lastNotificationCount, setLastNotificationCount] = useState(0);
+    const [notificationSettings, setNotificationSettings] = useState(() => {
+        const savedSettings = localStorage.getItem('notificationSettings');
+        return savedSettings ? JSON.parse(savedSettings) : {
+            settings: [
+                { id: 'low_stock_alerts', value: true },
+                { id: 'order_updates', value: true },
+                { id: 'sound_enabled', value: true }
+            ]
+        };
+    });
+
+    // Listen for notification settings changes
+    useEffect(() => {
+        const handleSettingsChange = (event) => {
+            setNotificationSettings(event.detail);
+        };
+
+        document.addEventListener('notificationSettingsChanged', handleSettingsChange);
+        return () => {
+            document.removeEventListener('notificationSettingsChanged', handleSettingsChange);
+        };
+    }, []);
 
     // Function to play notification sound
     const playNotificationSound = () => {
-        notificationSound.current.play().catch(error => {
-            console.error('Error playing notification sound:', error);
-        });
+        const soundEnabled = notificationSettings.settings.find(s => s.id === 'sound_enabled')?.value;
+        if (soundEnabled) {
+            notificationSound.current.play().catch(error => {
+                console.error('Error playing notification sound:', error);
+            });
+        }
     };
 
     // Fetch low stock items for notifications
     const fetchLowStockNotifications = async () => {
         try {
+            const lowStockAlertsEnabled = notificationSettings.settings.find(s => s.id === 'low_stock_alerts')?.value;
+            if (!lowStockAlertsEnabled) {
+                setNotifications([]);
+                setHasUnread(false);
+                return;
+            }
+
             const response = await getDashboardStats();
             if (response.data && response.data.data) {
                 const { lowStockItems = [] } = response.data.data;
@@ -48,12 +79,11 @@ export default function Header({ onToggleSidebar }) {
                     text: `Low stock alert: ${item.name} (${item.stock} remaining)`,
                     unread: true,
                     type: 'low-stock',
-                    onClick: () => navigate('/admin/menu')  // Navigate to menu management when clicked
+                    onClick: () => navigate('/admin/menu')
                 }));
 
                 // Check if there are new notifications
                 if (newNotifications.length > lastNotificationCount && lastNotificationCount !== 0) {
-                    // Play sound only if there are new notifications
                     playNotificationSound();
 
                     // Show browser notification if permitted
@@ -71,10 +101,6 @@ export default function Header({ onToggleSidebar }) {
                 setLastNotificationCount(newNotifications.length);
                 setNotifications(newNotifications);
                 setHasUnread(newNotifications.some(n => n.unread));
-
-                // Log for debugging
-                console.log('Low stock items found:', lowStockItems.length);
-                console.log('Notifications set:', newNotifications);
             }
         } catch (error) {
             console.error('Error fetching notifications:', error);
@@ -153,8 +179,8 @@ export default function Header({ onToggleSidebar }) {
         <header className="bg-white shadow-sm">
             <div className="mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex h-16 items-center">
-                    {/* Left section with hamburger and search */}
-                    <div className="flex items-center gap-3">
+                    {/* Left section with hamburger */}
+                    <div className="flex items-center">
                         <motion.button
                             type="button"
                             className="p-2 rounded-md text-gray-500 hover:text-orange-600"
@@ -164,23 +190,6 @@ export default function Header({ onToggleSidebar }) {
                         >
                             <Bars3Icon className="h-6 w-6 transition-transform duration-200 hover:rotate-180" />
                         </motion.button>
-
-                        <div className="relative w-64">
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                            </div>
-                            <motion.input
-                                type="search"
-                                whileFocus={{ scale: 1.02 }}
-                                className="block w-full rounded-md border-0 py-2 pl-10 pr-3 
-                                    text-gray-900 ring-1 ring-inset ring-gray-300
-                                    placeholder:text-gray-400 
-                                    focus:ring-2 focus:ring-orange-500
-                                    hover:ring-gray-400
-                                    transition-all duration-200"
-                                placeholder="Search..."
-                            />
-                        </div>
                     </div>
 
                     {/* Spacer */}

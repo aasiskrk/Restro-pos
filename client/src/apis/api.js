@@ -23,11 +23,23 @@ Api.interceptors.request.use((config) => {
 Api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.log("API Error Interceptor:", {
+      status: error.response?.status,
+      url: error.config?.url,
+      method: error.config?.method,
+    });
+
+    // Handle 401 errors
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      console.log("Unauthorized error detected in API call");
+      // Only clear auth data if we're not already on the login page
+      if (!window.location.pathname.includes("login")) {
+        console.log("Clearing auth data...");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
     }
+
     return Promise.reject(error);
   }
 );
