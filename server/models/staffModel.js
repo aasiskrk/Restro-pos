@@ -39,6 +39,20 @@ const staffSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    admin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Admin reference is required"],
+    },
+    restaurant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Restaurant",
+      required: [true, "Restaurant reference is required"],
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
