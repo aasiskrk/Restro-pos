@@ -1,9 +1,12 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
+const Staff = require("../models/staffModel");
 
 // Protect routes
 const protect = async (req, res, next) => {
   try {
+    console.log("=== Auth Protection Debug ===");
+    console.log("Headers:", JSON.stringify(req.headers, null, 2));
     let token;
 
     // Get token from Authorization header
@@ -12,9 +15,11 @@ const protect = async (req, res, next) => {
       req.headers.authorization.startsWith("Bearer")
     ) {
       token = req.headers.authorization.split(" ")[1];
+      console.log("Found token:", token);
     }
 
     if (!token) {
+      console.log("No token found in request");
       return res.status(401).json({
         success: false,
         message: "Not authorized to access this route",
@@ -23,36 +28,97 @@ const protect = async (req, res, next) => {
 
     try {
       // Verify token
+      console.log(
+        "Verifying token with secret:",
+        process.env.JWT_SECRET ? "Secret exists" : "Secret missing"
+      );
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("Decoded token data:", JSON.stringify(decoded, null, 2));
 
-      // Get user from token
-      const user = await User.findById(decoded.id).select("-password");
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: "User not found",
+      // Check if user is staff
+      if (decoded.isStaff) {
+        console.log("Processing staff token with ID:", decoded._id);
+        // Get staff from token
+        const staff = await Staff.findById(decoded._id).select("-password");
+        console.log("Found staff in database:", staff ? "Yes" : "No");
+
+        if (!staff) {
+          console.log("Staff not found in database for ID:", decoded._id);
+          return res.status(401).json({
+            success: false,
+            message: "Staff not found",
+          });
+        }
+
+        // Check if staff is active
+        if (!staff.isActive) {
+          console.log("Staff account is deactivated");
+          return res.status(401).json({
+            success: false,
+            message: "Your account has been deactivated",
+          });
+        }
+
+        // Add staff to request object with isStaff flag
+        req.user = staff;
+        req.user.isStaff = true;
+        console.log("Staff user set in request:", {
+          id: req.user._id,
+          role: req.user.role,
+          isStaff: req.user.isStaff,
+          restaurant: req.user.restaurant,
+          admin: req.user.admin,
+        });
+      } else {
+        console.log("Processing admin token with ID:", decoded._id);
+        // Get admin user from token
+        const user = await User.findById(decoded._id).select("-password");
+        console.log("Found admin in database:", user ? "Yes" : "No");
+
+        if (!user) {
+          console.log("Admin user not found in database for ID:", decoded._id);
+          return res.status(401).json({
+            success: false,
+            message: "User not found",
+          });
+        }
+
+        // Check if user is active
+        if (!user.isActive) {
+          console.log("Admin account is deactivated");
+          return res.status(401).json({
+            success: false,
+            message: "Your account has been deactivated",
+          });
+        }
+
+        // Add user to request object
+        req.user = user;
+        req.user.isStaff = false;
+        console.log("Admin user set in request:", {
+          id: req.user._id,
+          role: req.user.role,
+          isStaff: req.user.isStaff,
+          restaurant: req.user.restaurant,
         });
       }
 
-      // Check if user is active
-      if (!user.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: "Your account has been deactivated",
-        });
-      }
-
-      // Add user to request object
-      req.user = user;
+      console.log("Authentication successful, proceeding to next middleware");
       next();
     } catch (error) {
+      console.error("Token verification error:", error);
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
       return res.status(401).json({
         success: false,
         message: "Not authorized to access this route",
+        error: error.message,
       });
     }
   } catch (error) {
     console.error("Auth guard error:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).json({
       success: false,
       message: "Error authenticating user",
@@ -145,23 +211,43 @@ const roleGuard = (roles) => {
 
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("Decoded token in roleGuard:", decoded);
 
-      // Get user from database
-      const user = await User.findById(decoded.id).select("-password");
+      let user;
+      if (decoded.isStaff) {
+        // Get staff from token
+        user = await Staff.findById(decoded.id).select("-password");
+        if (!user) {
+          return res.status(401).json({
+            success: false,
+            message: "Staff not found",
+          });
+        }
 
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: "User not found",
-        });
-      }
+        // Check if staff is active
+        if (!user.isActive) {
+          return res.status(401).json({
+            success: false,
+            message: "Your account has been deactivated",
+          });
+        }
+      } else {
+        // Get admin user from token
+        user = await User.findById(decoded.id).select("-password");
+        if (!user) {
+          return res.status(401).json({
+            success: false,
+            message: "User not found",
+          });
+        }
 
-      // Check if user is active
-      if (!user.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: "Account is deactivated",
-        });
+        // Check if user is active
+        if (!user.isActive) {
+          return res.status(401).json({
+            success: false,
+            message: "Account is deactivated",
+          });
+        }
       }
 
       // Check if user has required role
@@ -172,8 +258,9 @@ const roleGuard = (roles) => {
         });
       }
 
-      // Add user to request object
+      // Add user to request object with isStaff flag
       req.user = user;
+      req.user.isStaff = decoded.isStaff;
       next();
     } catch (error) {
       console.error("Role guard error:", error);
