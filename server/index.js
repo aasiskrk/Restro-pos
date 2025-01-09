@@ -68,12 +68,19 @@ app.use("/api/dashboard", dashboardRoutes);
 
 // Serve static files from the public directory
 app.use("/menu", express.static(path.join(__dirname, "public/menu")));
+app.use("/staff", express.static(path.join(__dirname, "public/staff")));
 
 // Create public/menu directory if it doesn't exist
 const fs = require("fs");
 const menuUploadDir = path.join(__dirname, "public/menu");
+const staffUploadDir = path.join(__dirname, "public/staff");
+
 if (!fs.existsSync(menuUploadDir)) {
   fs.mkdirSync(menuUploadDir, { recursive: true });
+}
+
+if (!fs.existsSync(staffUploadDir)) {
+  fs.mkdirSync(staffUploadDir, { recursive: true });
 }
 
 // Handle undefined routes

@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const Restaurant = require("../models/restaurantModel");
+const Staff = require("../models/staffModel");
 
 // Register a new restaurant
 exports.register = async (req, res) => {
@@ -57,59 +58,109 @@ exports.register = async (req, res) => {
 // Login user
 exports.login = async (req, res) => {
   try {
+    console.log("=== Login Debug ===");
     const { email, password, role } = req.body;
+    console.log("Login attempt:", { email, role });
 
-    // Find user by email
-    const user = await User.findOne({ email }).populate("restaurant");
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
+    let user;
+    let isStaff = false;
 
-    // Check if user role matches
-    if (user.role !== role) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid role for this user",
-      });
+    // Check if role is staff role
+    if (role === "server" || role === "kitchen" || role === "cashier") {
+      console.log("Checking staff credentials...");
+      user = await Staff.findOne({ email })
+        .select("+password")
+        .populate("admin")
+        .populate("restaurant");
+
+      if (!user) {
+        console.log("Staff not found with email:", email);
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      // Verify staff password
+      const isMatch = await user.correctPassword(password);
+      if (!isMatch) {
+        console.log("Invalid password for staff");
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      isStaff = true;
+    } else {
+      console.log("Checking admin credentials...");
+      user = await User.findOne({ email })
+        .select("+password")
+        .populate("restaurant");
+
+      if (!user) {
+        console.log("Admin not found with email:", email);
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      // Verify admin password
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        console.log("Invalid password for admin");
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
     }
 
     // Check if user is active
     if (!user.isActive) {
+      console.log("User account is deactivated");
       return res.status(401).json({
         success: false,
         message: "Your account has been deactivated",
       });
     }
 
-    // Verify password
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
+    // Check if role matches
+    if (user.role !== role) {
+      console.log("Role mismatch:", {
+        userRole: user.role,
+        requestedRole: role,
+      });
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid role for this user",
       });
     }
 
-    // Update last login
-    user.lastLogin = Date.now();
-    await user.save();
-
     // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" }
-    );
+    const tokenData = {
+      _id: user._id.toString(),
+      role: user.role,
+      isStaff,
+      restaurant: user.restaurant._id.toString(),
+    };
+
+    // Add admin reference for staff users
+    if (isStaff) {
+      tokenData.admin = user.admin._id.toString();
+    }
+
+    console.log("Generating token with data:", tokenData);
+    const token = jwt.sign(tokenData, process.env.JWT_SECRET, {
+      expiresIn: "24h",
+    });
 
     // Remove sensitive data
     const userResponse = user.toObject();
     delete userResponse.password;
-    delete userResponse.resetPasswordToken;
-    delete userResponse.resetPasswordExpires;
 
+    console.log("Login successful");
     res.status(200).json({
       success: true,
       message: "Login successful",
@@ -118,6 +169,7 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).json({
       success: false,
       message: "Error logging in",
@@ -202,23 +254,98 @@ exports.setupAdmin = async (req, res) => {
 // Get current user
 exports.getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id)
-      .select("-password -resetPasswordToken -resetPasswordExpires")
-      .populate("restaurant");
+    console.log("=== Get Current User Debug ===");
+    console.log("Request user object:", {
+      id: req.user._id.toString(),
+      role: req.user.role,
+      isStaff: req.user.isStaff,
+      restaurant: req.user.restaurant ? req.user.restaurant.toString() : null,
+      admin: req.user.admin ? req.user.admin.toString() : null,
+    });
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
+    let user;
+    if (req.user.isStaff) {
+      console.log("Fetching staff user data...");
+      // For staff users
+      user = await Staff.findById(req.user._id)
+        .select("-password")
+        .populate({
+          path: "admin",
+          select: "fullName email role -_id",
+        })
+        .populate({
+          path: "restaurant",
+          select: "restaurantName type -_id",
+        });
+
+      if (!user) {
+        console.log("Staff not found in database for ID:", req.user._id);
+        return res.status(404).json({
+          success: false,
+          message: "Staff not found",
+        });
+      }
+
+      console.log("Found staff user:", {
+        id: user._id.toString(),
+        role: user.role,
+        name: user.fullName,
+        restaurant: user.restaurant ? user.restaurant._id : null,
+        admin: user.admin ? user.admin._id : null,
+      });
+    } else {
+      console.log("Fetching admin user data...");
+      // For admin users
+      user = await User.findById(req.user._id)
+        .select("-password -resetPasswordToken -resetPasswordExpires")
+        .populate({
+          path: "restaurant",
+          select: "restaurantName type -_id",
+        });
+
+      if (!user) {
+        console.log("Admin not found in database for ID:", req.user._id);
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      console.log("Found admin user:", {
+        id: user._id.toString(),
+        role: user.role,
+        name: user.fullName,
+        restaurant: user.restaurant ? user.restaurant._id : null,
       });
     }
 
+    // Check if user is active
+    if (!user.isActive) {
+      console.log("User account is deactivated");
+      return res.status(401).json({
+        success: false,
+        message: "Your account has been deactivated",
+      });
+    }
+
+    // Convert to plain object and ensure IDs are strings
+    const userResponse = user.toObject();
+    userResponse._id = userResponse._id.toString();
+    if (userResponse.restaurant && userResponse.restaurant._id) {
+      userResponse.restaurant._id = userResponse.restaurant._id.toString();
+    }
+    if (userResponse.admin && userResponse.admin._id) {
+      userResponse.admin._id = userResponse.admin._id.toString();
+    }
+
+    console.log("Successfully retrieved user data");
     res.status(200).json({
       success: true,
-      user,
+      user: userResponse,
     });
   } catch (error) {
     console.error("Get current user error:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).json({
       success: false,
       message: "Error getting current user",
@@ -273,22 +400,46 @@ exports.updateProfile = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
+    console.log("Change password request for user:", req.user.id);
+    console.log("Is staff:", req.user.isStaff);
 
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    let user;
+    if (req.user.isStaff) {
+      // For staff users
+      user = await Staff.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "Staff not found",
+        });
+      }
 
-    // Verify current password
-    const isMatch = await user.comparePassword(currentPassword);
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Current password is incorrect",
-      });
+      // Verify current password for staff
+      const isMatch = await user.correctPassword(currentPassword);
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: "Current password is incorrect",
+        });
+      }
+    } else {
+      // For admin users
+      user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      // Verify current password for admin
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: "Current password is incorrect",
+        });
+      }
     }
 
     // Update password
