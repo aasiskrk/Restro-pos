@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     TableCellsIcon,
@@ -15,65 +15,98 @@ import {
 import { TableCellsIcon as TableCellsIconSolid } from '@heroicons/react/24/solid';
 import DashboardLayout from '../../components/admin/DashboardLayout';
 import { Button } from '../../components/common/Form';
+import { getActiveOrders, updateOrderStatus, getAllMenuItems } from '../../apis/api';
+import { toast } from 'react-toastify';
 
 const navigation = [
     { name: 'Kitchen Display', icon: TableCellsIcon, href: '/kitchen', current: true },
     { name: 'Inventory Alert', icon: BellAlertIcon, href: '/kitchen/inventory', current: false },
 ];
 
-// Mock data for orders with more items to demonstrate scrolling
-const orders = [
-    {
-        id: '1234',
-        table: 12,
-        items: [
-            { name: 'Grilled Salmon', quantity: 2, status: 'new' },
-            { name: 'Caesar Salad', quantity: 1, status: 'new' },
-            { name: 'Steak Medium', quantity: 1, status: 'new' },
-            { name: 'French Fries', quantity: 2, status: 'new' },
-            { name: 'Garlic Bread', quantity: 1, status: 'new' }
-        ],
-        time: '7 items',
-        status: 'new'
-    },
-    {
-        id: '1235',
-        table: 8,
-        items: [
-            { name: 'Pasta Carbonara', quantity: 2, status: 'in-progress' },
-            { name: 'Mushroom Soup', quantity: 1, status: 'in-progress' },
-            { name: 'Bruschetta', quantity: 1, status: 'in-progress' }
-        ],
-        time: '4 items',
-        status: 'in-progress'
-    },
-    {
-        id: '1236',
-        table: 15,
-        items: [
-            { name: 'Fish & Chips', quantity: 1, status: 'ready' },
-            { name: 'Burger', quantity: 1, status: 'ready' }
-        ],
-        time: '2 items',
-        status: 'ready'
-    }
-];
-
 export default function KitchenInterface() {
     const [selectedFilter, setSelectedFilter] = useState('all');
     const [selectedOrder, setSelectedOrder] = useState(null);
-    const totalOrders = orders.length;
-    const newOrders = orders.filter(order => order.status === 'new').length;
-    const inProgressOrders = orders.filter(order => order.status === 'in-progress').length;
-    const readyOrders = orders.filter(order => order.status === 'ready').length;
+    const [activeOrders, setActiveOrders] = useState([]);
+    const [completedOrders, setCompletedOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [deliveredOrders, setDeliveredOrders] = useState(new Set());
+
+    const fetchOrders = async () => {
+        try {
+            const response = await getActiveOrders();
+            setActiveOrders(response.data.orders);
+        } catch (error) {
+            console.error('Error fetching orders:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchOrders();
+        const interval = setInterval(fetchOrders, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleStartOrder = async (orderId) => {
+        try {
+            await updateOrderStatus(orderId, 'in-progress');
+            toast.success('Order started');
+            await fetchOrders();
+        } catch (error) {
+            toast.error('Failed to start order');
+            console.error('Error starting order:', error);
+        }
+    };
+
+    const handleMarkReady = async (orderId) => {
+        try {
+            const orderToComplete = [...activeOrders].find(order => order._id === orderId);
+            if (!orderToComplete) return;
+
+            await updateOrderStatus(orderId, 'completed');
+
+            // Add to completed orders
+            setCompletedOrders(prev => [...prev, { ...orderToComplete, status: 'completed' }]);
+
+            toast.success('Order marked as ready');
+            await fetchOrders();
+        } catch (error) {
+            toast.error('Failed to mark order as ready');
+            console.error('Error marking order as ready:', error);
+        }
+    };
+
+    const handleCallServer = async (orderId) => {
+        try {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/notify-server`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ orderId, type: 'ORDER_READY' })
+            });
+            toast.success('Server has been notified');
+        } catch (error) {
+            toast.error('Failed to notify server');
+            console.error('Error notifying server:', error);
+        }
+    };
+
+    const handleDeliverOrder = (orderId) => {
+        setDeliveredOrders(prev => new Set([...prev, orderId]));
+        setCompletedOrders(prev => prev.filter(order => order._id !== orderId));
+        toast.success('Order marked as delivered');
+    };
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'new':
+            case 'pending':
                 return 'bg-blue-50 text-blue-700 border border-blue-200';
             case 'in-progress':
                 return 'bg-orange-50 text-orange-700 border border-orange-200';
-            case 'ready':
+            case 'completed':
                 return 'bg-green-50 text-green-700 border border-green-200';
             default:
                 return 'bg-gray-50 text-gray-700 border border-gray-200';
@@ -82,11 +115,11 @@ export default function KitchenInterface() {
 
     const getStatusBorderColor = (status) => {
         switch (status) {
-            case 'new':
+            case 'pending':
                 return 'border-blue-100 bg-blue-50/30';
             case 'in-progress':
                 return 'border-orange-100 bg-orange-50/30';
-            case 'ready':
+            case 'completed':
                 return 'border-green-100 bg-green-50/30';
             default:
                 return 'border-gray-100';
@@ -95,11 +128,11 @@ export default function KitchenInterface() {
 
     const getActionButtonStyle = (status) => {
         switch (status) {
-            case 'new':
+            case 'pending':
                 return 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500 border-orange-500';
             case 'in-progress':
                 return 'bg-green-600 hover:bg-green-700 focus:ring-green-500 border-green-500';
-            case 'ready':
+            case 'completed':
                 return 'bg-orange-500 hover:bg-orange-600 focus:ring-orange-400 border-orange-400';
             default:
                 return 'bg-gray-500 hover:bg-gray-600 focus:ring-gray-400 border-gray-400';
@@ -108,20 +141,31 @@ export default function KitchenInterface() {
 
     const getStatusIcon = (status) => {
         switch (status) {
-            case 'new':
+            case 'pending':
                 return <SparklesIcon className="h-4 w-4" />;
             case 'in-progress':
                 return <ArrowPathIcon className="h-4 w-4" />;
-            case 'ready':
+            case 'completed':
                 return <CheckCircleIcon className="h-4 w-4" />;
             default:
                 return null;
         }
     };
 
+    // Combine active and completed orders, excluding delivered ones
+    const allOrders = [
+        ...activeOrders,
+        ...completedOrders.filter(order => !deliveredOrders.has(order._id))
+    ];
+
     const filteredOrders = selectedFilter === 'all'
-        ? orders
-        : orders.filter(order => order.status === selectedFilter);
+        ? allOrders
+        : allOrders.filter(order => order.status === selectedFilter);
+
+    const totalOrders = allOrders.length;
+    const pendingOrders = allOrders.filter(order => order.status === 'pending').length;
+    const inProgressOrders = allOrders.filter(order => order.status === 'in-progress').length;
+    const completedOrdersCount = allOrders.filter(order => order.status === 'completed').length;
 
     return (
         <DashboardLayout navigation={navigation}>
@@ -141,15 +185,6 @@ export default function KitchenInterface() {
                             </div>
                         </div>
                     </div>
-                    <div className="mt-4 sm:mt-0">
-                        <Button
-                            variant="primary"
-                            className="flex items-center gap-2"
-                        >
-                            <BellIcon className="h-5 w-5" />
-                            Call Server
-                        </Button>
-                    </div>
                 </div>
 
                 {/* Status Filters */}
@@ -168,16 +203,16 @@ export default function KitchenInterface() {
                         </span>
                     </button>
                     <button
-                        onClick={() => setSelectedFilter('new')}
-                        className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${selectedFilter === 'new'
+                        onClick={() => setSelectedFilter('pending')}
+                        className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${selectedFilter === 'pending'
                             ? 'bg-orange-600 text-white hover:bg-orange-700 focus:ring-orange-500'
                             : 'bg-white text-gray-700 hover:bg-gray-50 focus:ring-orange-500 border border-gray-300'
                             }`}
                     >
-                        New
-                        <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedFilter === 'new' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-900'
+                        Pending
+                        <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-900'
                             }`}>
-                            {newOrders}
+                            {pendingOrders}
                         </span>
                     </button>
                     <button
@@ -194,98 +229,125 @@ export default function KitchenInterface() {
                         </span>
                     </button>
                     <button
-                        onClick={() => setSelectedFilter('ready')}
-                        className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${selectedFilter === 'ready'
+                        onClick={() => setSelectedFilter('completed')}
+                        className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${selectedFilter === 'completed'
                             ? 'bg-orange-600 text-white hover:bg-orange-700 focus:ring-orange-500'
                             : 'bg-white text-gray-700 hover:bg-gray-50 focus:ring-orange-500 border border-gray-300'
                             }`}
                     >
                         Ready
-                        <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedFilter === 'ready' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-900'
+                        <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedFilter === 'completed' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-900'
                             }`}>
-                            {readyOrders}
+                            {completedOrdersCount}
                         </span>
                     </button>
                 </div>
 
                 {/* Orders Grid */}
                 <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredOrders.map((order) => (
-                        <motion.div
-                            key={order.id}
-                            layout
-                            className={`bg-white rounded-xl shadow-sm border-2 ${getStatusBorderColor(order.status)} overflow-hidden flex flex-col`}
-                            style={{ height: '250px' }}
-                        >
-                            <div className="p-6 flex flex-col h-full">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-lg bg-orange-50 border border-orange-100`}>
-                                            <TableCellsIcon className="h-5 w-5 text-orange-600" />
+                    {loading ? (
+                        <div className="col-span-full flex justify-center items-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                        </div>
+                    ) : filteredOrders.length === 0 ? (
+                        <div className="col-span-full text-center py-12 text-gray-500">
+                            No orders found
+                        </div>
+                    ) : (
+                        filteredOrders.map((order) => (
+                            <motion.div
+                                key={order._id}
+                                layout
+                                className={`bg-white rounded-xl shadow-sm border-2 ${getStatusBorderColor(order.status)} overflow-hidden flex flex-col`}
+                                style={{ minHeight: '250px' }}
+                            >
+                                <div className="p-6 flex flex-col h-full">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-lg bg-orange-50 border border-orange-100`}>
+                                                <TableCellsIcon className="h-5 w-5 text-orange-600" />
+                                            </div>
+                                            <h3 className="text-lg font-medium text-gray-900">Table {order.table.number}</h3>
                                         </div>
-                                        <h3 className="text-lg font-medium text-gray-900">Table {order.table}</h3>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => setSelectedOrder(order)}
-                                            className="p-1 rounded-full hover:bg-orange-50"
-                                            title="View Details"
-                                        >
-                                            <EyeIcon className="h-5 w-5 text-orange-500" />
-                                        </button>
-                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                                            {getStatusIcon(order.status)}
-                                            {order.status === 'in-progress' ? 'In Progress' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
-                                    {order.items.map((item, index) => (
-                                        <div key={index} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-50 border border-orange-100 text-sm font-medium text-orange-700">{item.quantity}x</span>
-                                                <span className="text-sm text-gray-600">{item.name}</span>
-                                            </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setSelectedOrder(order)}
+                                                className="p-1 rounded-full hover:bg-orange-50"
+                                                title="View Details"
+                                            >
+                                                <EyeIcon className="h-5 w-5 text-orange-500" />
+                                            </button>
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                                                {getStatusIcon(order.status)}
+                                                {order.status === 'in-progress' ? 'In Progress' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                            </span>
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
 
-                                <div className="mt-auto">
-                                    {order.status === 'new' && (
-                                        <button
-                                            className={`w-full px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle(order.status)} focus:outline-none focus:ring-2 focus:ring-offset-2`}
-                                        >
-                                            <div className="flex items-center justify-center gap-2">
-                                                <SparklesIcon className="h-4 w-4" />
-                                                <span>Start Order</span>
+                                    <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
+                                        {order.items.map((item, index) => (
+                                            <div key={index} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-50 border border-orange-100 text-sm font-medium text-orange-700">{item.quantity}x</span>
+                                                    <span className="text-sm text-gray-600">{item.menuItem.name}</span>
+                                                </div>
+                                                {item.notes && (
+                                                    <span className="text-xs text-gray-500 italic">{item.notes}</span>
+                                                )}
                                             </div>
-                                        </button>
-                                    )}
-                                    {order.status === 'in-progress' && (
-                                        <button
-                                            className={`w-full px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle(order.status)} focus:outline-none focus:ring-2 focus:ring-offset-2`}
-                                        >
-                                            <div className="flex items-center justify-center gap-2">
-                                                <CheckCircleIcon className="h-4 w-4" />
-                                                <span>Mark Ready</span>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-auto space-y-2">
+                                        {order.status === 'pending' && (
+                                            <button
+                                                onClick={() => handleStartOrder(order._id)}
+                                                className={`w-full px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle('pending')} focus:outline-none focus:ring-2 focus:ring-offset-2`}
+                                            >
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <SparklesIcon className="h-4 w-4" />
+                                                    <span>Start Order</span>
+                                                </div>
+                                            </button>
+                                        )}
+                                        {order.status === 'in-progress' && (
+                                            <button
+                                                onClick={() => handleMarkReady(order._id)}
+                                                className={`w-full px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle('in-progress')} focus:outline-none focus:ring-2 focus:ring-offset-2`}
+                                            >
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <CheckCircleIcon className="h-4 w-4" />
+                                                    <span>Mark Ready</span>
+                                                </div>
+                                            </button>
+                                        )}
+                                        {order.status === 'completed' && (
+                                            <div className="space-y-2">
+                                                <button
+                                                    onClick={() => handleCallServer(order._id)}
+                                                    className={`w-full px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle('completed')} focus:outline-none focus:ring-2 focus:ring-offset-2`}
+                                                >
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <BellIcon className="h-4 w-4" />
+                                                        <span>Call Server</span>
+                                                    </div>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeliverOrder(order._id)}
+                                                    className="w-full px-4 py-2 border text-sm font-medium rounded-md text-gray-700 shadow-sm transition-colors duration-200 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                                                >
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <CheckCircleIcon className="h-4 w-4" />
+                                                        <span>Delivered</span>
+                                                    </div>
+                                                </button>
                                             </div>
-                                        </button>
-                                    )}
-                                    {order.status === 'ready' && (
-                                        <button
-                                            className={`w-full px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle(order.status)} focus:outline-none focus:ring-2 focus:ring-offset-2`}
-                                        >
-                                            <div className="flex items-center justify-center gap-2">
-                                                <BellIcon className="h-4 w-4" />
-                                                <span>Call Server</span>
-                                            </div>
-                                        </button>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    ))}
+                            </motion.div>
+                        ))
+                    )}
                 </div>
 
                 {/* Order Details Modal */}
@@ -312,13 +374,13 @@ export default function KitchenInterface() {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <h2 className="text-xl font-semibold text-gray-900">Table {selectedOrder.table}</h2>
+                                                <h2 className="text-xl font-semibold text-gray-900">Table {selectedOrder.table.number}</h2>
                                                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
                                                     {getStatusIcon(selectedOrder.status)}
                                                     {selectedOrder.status === 'in-progress' ? 'In Progress' : selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-gray-500">Order #{selectedOrder.id}</p>
+                                            <p className="text-sm text-gray-500">Order #{selectedOrder._id.slice(-6)}</p>
                                         </div>
                                     </div>
                                     <button
@@ -339,12 +401,11 @@ export default function KitchenInterface() {
                                                             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-50 border border-orange-100 text-orange-700 font-medium">
                                                                 {item.quantity}x
                                                             </span>
-                                                            <span className="text-gray-900">{item.name}</span>
+                                                            <span className="text-gray-900">{item.menuItem.name}</span>
                                                         </div>
-                                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
-                                                            {getStatusIcon(item.status)}
-                                                            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                                                        </span>
+                                                        {item.notes && (
+                                                            <span className="text-sm text-gray-500 italic">{item.notes}</span>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -353,9 +414,13 @@ export default function KitchenInterface() {
                                 </div>
                                 <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
                                     <div className="flex justify-end gap-4">
-                                        {selectedOrder.status === 'new' && (
+                                        {selectedOrder.status === 'pending' && (
                                             <button
-                                                className={`px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle(selectedOrder.status)} focus:outline-none focus:ring-2 focus:ring-offset-2`}
+                                                onClick={() => {
+                                                    handleStartOrder(selectedOrder._id);
+                                                    setSelectedOrder(null);
+                                                }}
+                                                className={`px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle('pending')} focus:outline-none focus:ring-2 focus:ring-offset-2`}
                                             >
                                                 <div className="flex items-center justify-center gap-2">
                                                     <SparklesIcon className="h-4 w-4" />
@@ -365,7 +430,11 @@ export default function KitchenInterface() {
                                         )}
                                         {selectedOrder.status === 'in-progress' && (
                                             <button
-                                                className={`px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle(selectedOrder.status)} focus:outline-none focus:ring-2 focus:ring-offset-2`}
+                                                onClick={() => {
+                                                    handleMarkReady(selectedOrder._id);
+                                                    setSelectedOrder(null);
+                                                }}
+                                                className={`px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle('in-progress')} focus:outline-none focus:ring-2 focus:ring-offset-2`}
                                             >
                                                 <div className="flex items-center justify-center gap-2">
                                                     <CheckCircleIcon className="h-4 w-4" />
@@ -373,15 +442,33 @@ export default function KitchenInterface() {
                                                 </div>
                                             </button>
                                         )}
-                                        {selectedOrder.status === 'ready' && (
-                                            <button
-                                                className={`px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle(selectedOrder.status)} focus:outline-none focus:ring-2 focus:ring-offset-2`}
-                                            >
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <BellIcon className="h-4 w-4" />
-                                                    <span>Call Server</span>
-                                                </div>
-                                            </button>
+                                        {selectedOrder.status === 'completed' && (
+                                            <>
+                                                <button
+                                                    onClick={() => {
+                                                        handleCallServer(selectedOrder._id);
+                                                        setSelectedOrder(null);
+                                                    }}
+                                                    className={`px-4 py-2 border text-sm font-medium rounded-md text-white shadow-sm transition-colors duration-200 ${getActionButtonStyle('completed')} focus:outline-none focus:ring-2 focus:ring-offset-2`}
+                                                >
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <BellIcon className="h-4 w-4" />
+                                                        <span>Call Server</span>
+                                                    </div>
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        handleDeliverOrder(selectedOrder._id);
+                                                        setSelectedOrder(null);
+                                                    }}
+                                                    className="px-4 py-2 border text-sm font-medium rounded-md text-gray-700 shadow-sm transition-colors duration-200 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                                                >
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <CheckCircleIcon className="h-4 w-4" />
+                                                        <span>Delivered</span>
+                                                    </div>
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                 </div>
