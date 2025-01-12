@@ -72,6 +72,7 @@ const createOrder = async (req, res) => {
       tax,
       total,
       status: "pending",
+      paymentStatus: "unpaid",
     });
 
     await order.save();
@@ -313,10 +314,12 @@ const updateOrder = async (req, res) => {
 // Update order status
 const updateOrderStatus = async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, paymentStatus } = req.body;
 
   try {
-    console.log(`Updating order ${id} to status: ${status}`); // Debug log
+    console.log(
+      `Updating order ${id} to status: ${status}, paymentStatus: ${paymentStatus}`
+    ); // Debug log
 
     const order = await Order.findById(id).populate("items.menuItem");
     if (!order) {
@@ -326,47 +329,73 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    console.log(`Current order status: ${order.status}`); // Debug log
+    console.log(
+      `Current order status: ${order.status}, paymentStatus: ${order.paymentStatus}`
+    ); // Debug log
 
     // If order is being completed, reduce stock for each item
     if (status === "completed" && order.status !== "completed") {
       console.log("Processing stock reduction for completed order"); // Debug log
 
-      // Reduce stock for each menu item
-      for (const orderItem of order.items) {
-        const menuItem = await MenuItem.findById(orderItem.menuItem);
-        if (menuItem) {
-          console.log(
-            `Processing item ${menuItem.name}: Current stock: ${menuItem.stock}, Order quantity: ${orderItem.quantity}`
-          ); // Debug log
+      try {
+        // Reduce stock for each menu item
+        for (const orderItem of order.items) {
+          const menuItem = await MenuItem.findById(orderItem.menuItem);
+          if (menuItem) {
+            console.log(
+              `Processing item ${menuItem.name}: Current stock: ${menuItem.stock}, Order quantity: ${orderItem.quantity}`
+            ); // Debug log
 
-          // Check if there's enough stock
-          if (menuItem.stock < orderItem.quantity) {
-            return res.status(400).json({
-              success: false,
-              message: `Insufficient stock for item: ${menuItem.name}. Available: ${menuItem.stock}, Required: ${orderItem.quantity}`,
-            });
+            // Check if there's enough stock
+            if (menuItem.stock < orderItem.quantity) {
+              return res.status(400).json({
+                success: false,
+                message: `Insufficient stock for item: ${menuItem.name}. Available: ${menuItem.stock}, Required: ${orderItem.quantity}`,
+              });
+            }
+
+            // Reduce the stock
+            const newStock = menuItem.stock - orderItem.quantity;
+            console.log(
+              `Reducing stock for ${menuItem.name} from ${menuItem.stock} to ${newStock}`
+            ); // Debug log
+
+            menuItem.stock = newStock;
+            await menuItem.save();
+
+            console.log(`Stock updated successfully for ${menuItem.name}`); // Debug log
           }
-
-          // Reduce the stock
-          const newStock = menuItem.stock - orderItem.quantity;
-          console.log(
-            `Reducing stock for ${menuItem.name} from ${menuItem.stock} to ${newStock}`
-          ); // Debug log
-
-          menuItem.stock = newStock;
-          await menuItem.save();
-
-          console.log(`Stock updated successfully for ${menuItem.name}`); // Debug log
         }
+        console.log("Stock reduction completed successfully"); // Debug log
+      } catch (error) {
+        console.error("Error updating stock:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Error updating stock",
+          error: error.message,
+        });
       }
-      console.log("Stock reduction completed successfully"); // Debug log
     }
 
-    // Update order status
-    order.status = status;
-    order.updatedAt = Date.now();
-    await order.save();
+    // Update order status and payment status
+    const updateData = {
+      status: status,
+      updatedAt: Date.now(),
+    };
+
+    if (paymentStatus) {
+      updateData.paymentStatus = paymentStatus;
+    }
+
+    // Update the order with all changes at once
+    const updatedOrder = await Order.findByIdAndUpdate(id, updateData, {
+      new: true,
+    })
+      .populate({
+        path: "items.menuItem",
+        select: "name price stock",
+      })
+      .populate("table", "number");
 
     // If order is completed or cancelled, free up the table
     if ((status === "completed" || status === "cancelled") && order.table) {
@@ -376,14 +405,6 @@ const updateOrderStatus = async (req, res) => {
         updatedAt: Date.now(),
       });
     }
-
-    // Populate the order details before sending response
-    const updatedOrder = await Order.findById(id)
-      .populate({
-        path: "items.menuItem",
-        select: "name price stock",
-      })
-      .populate("table", "number");
 
     console.log("Order update completed successfully"); // Debug log
 

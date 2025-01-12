@@ -7,19 +7,10 @@ const fs = require("fs");
 
 // Staff CRUD Operations
 exports.createStaff = catchAsync(async (req, res) => {
-  // Get admin and restaurant info from the authenticated user
-  const admin = req.user;
-  if (!admin || admin.role !== "admin") {
-    return res.status(403).json({
-      status: "fail",
-      message: "Only admin can create staff members",
-    });
-  }
-
   const staffData = {
     ...req.body,
-    admin: admin._id,
-    restaurant: admin.restaurant,
+    admin: req.body.admin || "677299c68b74458eff99d36b", // Default admin ID
+    restaurant: req.body.restaurant || "677299bd8b74458eff99d367", // Default restaurant ID
   };
 
   // Handle profile picture upload
@@ -49,19 +40,7 @@ exports.createStaff = catchAsync(async (req, res) => {
 });
 
 exports.getAllStaff = catchAsync(async (req, res) => {
-  // Get staff only for the admin's restaurant
-  const admin = req.user;
-  if (!admin || admin.role !== "admin") {
-    return res.status(403).json({
-      status: "fail",
-      message: "Only admin can view staff members",
-    });
-  }
-
-  const staff = await Staff.find({
-    restaurant: admin.restaurant,
-    admin: admin._id,
-  }).select("-password");
+  const staff = await Staff.find().select("-password");
 
   res.status(200).json({
     status: "success",
@@ -71,19 +50,7 @@ exports.getAllStaff = catchAsync(async (req, res) => {
 });
 
 exports.getStaff = catchAsync(async (req, res, next) => {
-  const admin = req.user;
-  if (!admin || admin.role !== "admin") {
-    return res.status(403).json({
-      status: "fail",
-      message: "Only admin can view staff members",
-    });
-  }
-
-  const staff = await Staff.findOne({
-    _id: req.params.id,
-    restaurant: admin.restaurant,
-    admin: admin._id,
-  }).select("-password");
+  const staff = await Staff.findById(req.params.id).select("-password");
 
   if (!staff) {
     return next(new AppError("No staff found with that ID", 404));
@@ -96,26 +63,10 @@ exports.getStaff = catchAsync(async (req, res, next) => {
 });
 
 exports.updateStaff = catchAsync(async (req, res, next) => {
-  const admin = req.user;
-  if (!admin || admin.role !== "admin") {
-    return res.status(403).json({
-      status: "fail",
-      message: "Only admin can update staff members",
-    });
-  }
-
-  const staff = await Staff.findOneAndUpdate(
-    {
-      _id: req.params.id,
-      restaurant: admin.restaurant,
-      admin: admin._id,
-    },
-    req.body,
-    {
-      new: true,
-      runValidators: true,
-    }
-  ).select("-password");
+  const staff = await Staff.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  }).select("-password");
 
   if (!staff) {
     return next(new AppError("No staff found with that ID", 404));
@@ -128,24 +79,12 @@ exports.updateStaff = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteStaff = catchAsync(async (req, res, next) => {
-  const admin = req.user;
-  if (!admin || admin.role !== "admin") {
-    return res.status(403).json({
-      status: "fail",
-      message: "Only admin can delete staff members",
-    });
-  }
-
   try {
     // First, delete all attendance records for this staff
     await Attendance.deleteMany({ staff: req.params.id });
 
     // Then delete the staff member completely from the database
-    const staff = await Staff.findOneAndDelete({
-      _id: req.params.id,
-      restaurant: admin.restaurant,
-      admin: admin._id,
-    });
+    const staff = await Staff.findByIdAndDelete(req.params.id);
 
     if (!staff) {
       return next(new AppError("No staff found with that ID", 404));
