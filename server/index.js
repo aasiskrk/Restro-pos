@@ -12,6 +12,7 @@ const menuRoutes = require("./routes/menuRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const tableRoutes = require("./routes/tableRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 // Creating an express app
 const app = express();
@@ -65,6 +66,7 @@ app.use("/api/table", tableRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Serve static files from the public directory
 app.use("/menu", express.static(path.join(__dirname, "public/menu")));
