@@ -849,11 +849,14 @@ export default function OrdersAndTables() {
     // Fetch initial data
     useEffect(() => {
         fetchData();
+        // Add polling every 2 seconds
+        const interval = setInterval(fetchData, 2000);
+
+        return () => clearInterval(interval);
     }, []);
 
     const fetchData = async () => {
         try {
-            setLoading(true);
             const [tablesRes, ordersRes, menuItemsRes, categoriesRes] = await Promise.all([
                 getAllTables(),
                 getAllOrders(),
@@ -866,7 +869,6 @@ export default function OrdersAndTables() {
             setMenuItems(menuItemsRes.data.menuItems);
             setCategories(categoriesRes.data.categories);
         } catch (error) {
-            toast.error('Failed to fetch data');
             console.error('Fetch data error:', error);
         } finally {
             setLoading(false);

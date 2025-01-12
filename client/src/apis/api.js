@@ -266,4 +266,57 @@ export const getDashboardStats = async (timeRange = "today") => {
   }
 };
 
+// Payment APIs
+export const processCashPayment = async (paymentData) => {
+  try {
+    const response = await axios.post(`${API_URL}/payments/cash`, paymentData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const initiateEsewaPayment = async (data) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/payments/esewa/initiate`,
+      data
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const getPaymentStatus = async (orderId) => {
+  try {
+    const response = await axios.get(`${API_URL}/payments/status/${orderId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+// Process QR payment
+export const processQRPayment = async (paymentData) => {
+  try {
+    const response = await axios.post(`${API_URL}/payments/qr`, paymentData);
+    return response.data;
+  } catch (error) {
+    console.error("Error processing QR payment:", error);
+    throw error;
+  }
+};
+
+// Get all payments with filters
+export const getAllPayments = async (filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams(filters).toString();
+    const response = await axios.get(`${API_URL}/payments?${queryParams}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 export default Api;

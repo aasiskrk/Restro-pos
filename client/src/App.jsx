@@ -13,6 +13,7 @@ import OrderHistory from './pages/server/OrderHistory';
 import CashierInterface from './pages/cashier/CashierInterface';
 import Checkout from './pages/cashier/Checkout';
 import KitchenInterface from './pages/kitchen/KitchenInterface';
+import InventoryAlert from './pages/kitchen/InventoryAlert';
 import Signup from './pages/Signup';
 import { ThemeProvider } from './context/ThemeContext';
 import PaymentHistory from './pages/cashier/PaymentHistory';
@@ -49,6 +50,7 @@ function App() {
           <Route path="/cashier/checkout" element={<Checkout />} />
           <Route path="/cashier/history" element={<PaymentHistory />} />
           <Route path="/kitchen" element={<KitchenInterface />} />
+          <Route path="/kitchen/inventory" element={<InventoryAlert />} />
 
           {/* Common Routes (accessible by all roles) */}
           <Route path="/profile" element={<Profile />} />
