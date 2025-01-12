@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     HomeIcon,
@@ -9,6 +9,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { BookOpenIcon as BookOpenIconSolid } from '@heroicons/react/24/solid';
 import DashboardLayout from '../../components/admin/DashboardLayout';
+import { getAllCategories, getAllMenuItems } from '../../apis/api';
+import { toast } from 'react-toastify';
 
 const navigation = [
     { name: 'Dashboard', icon: HomeIcon, href: '/server', current: false },
@@ -17,74 +19,46 @@ const navigation = [
     { name: 'Order History', icon: ClockIcon, href: '/server/history', current: false },
 ];
 
-// Mock menu items data
-const menuItems = [
-    {
-        id: 1,
-        name: 'Classic Burger',
-        description: 'Beef patty, lettuce, tomato, cheese, special sauce',
-        price: 12.99,
-        category: 'Main Course',
-        image: 'https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-        inStock: 50
-    },
-    {
-        id: 2,
-        name: 'Caesar Salad',
-        description: 'Romaine lettuce, croutons, parmesan, caesar dressing',
-        price: 9.99,
-        category: 'Appetizers',
-        image: 'https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-        inStock: 30
-    },
-    {
-        id: 3,
-        name: 'Chocolate Lava Cake',
-        description: 'Warm chocolate cake, vanilla ice cream',
-        price: 7.99,
-        category: 'Desserts',
-        image: 'https://images.pexels.com/photos/4110008/pexels-photo-4110008.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-        inStock: 25
-    },
-    {
-        id: 4,
-        name: 'Iced Coffee',
-        description: 'Cold brew coffee, milk, whipped cream',
-        price: 4.99,
-        category: 'Beverages',
-        image: 'https://images.pexels.com/photos/2615323/pexels-photo-2615323.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-        inStock: 100
-    },
-    {
-        id: 5,
-        name: 'Margherita Pizza',
-        description: 'Special tomato sauce, parmesan cheese',
-        price: 12.99,
-        category: 'Main Course',
-        image: 'https://images.pexels.com/photos/2147491/pexels-photo-2147491.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-        inStock: 20
-    }
-];
-
-const categories = [
-    { id: 'all', name: 'All Items' },
-    { id: 'appetizers', name: 'Appetizers' },
-    { id: 'main-course', name: 'Main Course' },
-    { id: 'desserts', name: 'Desserts' },
-    { id: 'beverages', name: 'Beverages' }
-];
-
 export default function Menu() {
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [categories, setCategories] = useState([]);
+    const [menuItems, setMenuItems] = useState([]);
+    const [filteredItems, setFilteredItems] = useState([]);
 
-    const filteredItems = menuItems.filter(item => {
-        const matchesCategory = selectedCategory === 'all' ||
-            item.category.toLowerCase() === selectedCategory.replace('-', ' ');
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.description.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
+    // Fetch categories and menu items
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [categoriesResponse, menuItemsResponse] = await Promise.all([
+                    getAllCategories(),
+                    getAllMenuItems()
+                ]);
+
+                setCategories([
+                    { _id: 'all', name: 'All Items' },
+                    ...categoriesResponse.data.categories
+                ]);
+                setMenuItems(menuItemsResponse.data.menuItems);
+            } catch (error) {
+                toast.error('Failed to fetch menu data');
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    // Filter items based on category and search query
+    useEffect(() => {
+        const filtered = menuItems.filter(item => {
+            const matchesCategory = selectedCategory === 'all' ||
+                item.category._id === selectedCategory;
+            const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.description.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesCategory && matchesSearch;
+        });
+        setFilteredItems(filtered);
+    }, [selectedCategory, searchQuery, menuItems]);
 
     return (
         <DashboardLayout navigation={navigation}>
@@ -125,11 +99,11 @@ export default function Menu() {
                     <nav className="-mb-px flex space-x-4" aria-label="Tabs">
                         {categories.map((category) => (
                             <button
-                                key={category.id}
-                                onClick={() => setSelectedCategory(category.id)}
+                                key={category._id}
+                                onClick={() => setSelectedCategory(category._id)}
                                 className={`
                                     whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium
-                                    ${selectedCategory === category.id
+                                    ${selectedCategory === category._id
                                         ? 'border-orange-500 text-orange-600'
                                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                     }
@@ -145,7 +119,7 @@ export default function Menu() {
                 <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {filteredItems.map((item) => (
                         <motion.div
-                            key={item.id}
+                            key={item._id}
                             layout
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -154,7 +128,7 @@ export default function Menu() {
                         >
                             <div className="aspect-w-3 aspect-h-2">
                                 <img
-                                    src={item.image}
+                                    src={item.image ? `${import.meta.env.VITE_API_URL}/menu/${item.image}` : '/placeholder-image.jpg'}
                                     alt={item.name}
                                     className="h-48 w-full object-cover"
                                 />
@@ -168,7 +142,7 @@ export default function Menu() {
                                             ${item.price.toFixed(2)}
                                         </p>
                                         <p className="text-sm text-gray-500">
-                                            In Stock: {item.inStock}
+                                            In Stock: {item.stock}
                                         </p>
                                     </div>
                                 </div>

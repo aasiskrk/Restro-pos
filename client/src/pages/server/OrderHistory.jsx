@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     HomeIcon,
@@ -8,9 +8,12 @@ import {
     MagnifyingGlassIcon,
     XMarkIcon,
     EyeIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import { ClockIcon as ClockIconSolid } from '@heroicons/react/24/solid';
 import DashboardLayout from '../../components/admin/DashboardLayout';
+import { getAllOrders } from '../../apis/api';
 
 const navigation = [
     { name: 'Dashboard', icon: HomeIcon, href: '/server', current: false },
@@ -19,46 +22,18 @@ const navigation = [
     { name: 'Order History', icon: ClockIcon, href: '/server/history', current: true },
 ];
 
-// Mock order history data
-const orderHistory = [
-    {
-        id: 'ORD-2025001',
-        date: 'Jan 15, 2025 14:30',
-        table: 'Table 2',
-        server: 'Sarah Johnson',
-        items: [
-            { name: 'Classic Burger', quantity: 2, price: 12.99 },
-            { name: 'Caesar Salad', quantity: 1, price: 9.99 },
-            { name: 'Iced Coffee', quantity: 2, price: 4.99 }
-        ],
-        total: 84.50,
-        status: 'Completed'
-    },
-    {
-        id: 'ORD-2025002',
-        date: 'Jan 15, 2025 15:45',
-        table: 'Table 1',
-        server: 'Mike doe',
-        items: [
-            { name: 'Margherita Pizza', quantity: 1, price: 12.99 },
-            { name: 'Chocolate Lava Cake', quantity: 1, price: 7.99 }
-        ],
-        total: 21.00,
-        status: 'Completed'
-    },
-    {
-        id: 'ORD-2025003',
-        date: 'Jan 15, 2025 16:20',
-        table: 'Table 1',
-        server: 'Mike doe',
-        items: [
-            { name: 'Caesar Salad', quantity: 1, price: 9.99 },
-            { name: 'Iced Coffee', quantity: 2, price: 4.99 }
-        ],
-        total: 21.00,
-        status: 'In Progress'
-    }
-];
+// Helper function to format dates
+const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+};
 
 function OrderDetailsModal({ isOpen, onClose, order }) {
     if (!order) return null;
@@ -87,7 +62,7 @@ function OrderDetailsModal({ isOpen, onClose, order }) {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <h2 className="text-xl font-semibold text-gray-900">Order Details</h2>
-                                            <p className="mt-1 text-sm text-gray-500">Order #{order.id}</p>
+                                            <p className="mt-1 text-sm text-gray-500">Order #{order._id.slice(-6)}</p>
                                         </div>
                                         <button onClick={onClose}>
                                             <XMarkIcon className="h-6 w-6 text-gray-400" />
@@ -102,23 +77,21 @@ function OrderDetailsModal({ isOpen, onClose, order }) {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <p className="text-sm text-gray-500">Date & Time</p>
-                                                <p className="font-medium">{order.date}</p>
+                                                <p className="font-medium">{formatDate(order.createdAt)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-sm text-gray-500">Table</p>
-                                                <p className="font-medium">{order.table}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-500">Server</p>
-                                                <p className="font-medium">{order.server}</p>
+                                                <p className="font-medium">Table {order.table?.number}</p>
                                             </div>
                                             <div>
                                                 <p className="text-sm text-gray-500">Status</p>
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status === 'Completed'
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status === 'completed'
                                                     ? 'bg-green-100 text-green-800'
-                                                    : 'bg-yellow-100 text-yellow-800'
+                                                    : order.status === 'cancelled'
+                                                        ? 'bg-red-100 text-red-800'
+                                                        : 'bg-yellow-100 text-yellow-800'
                                                     }`}>
-                                                    {order.status}
+                                                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                                                 </span>
                                             </div>
                                         </div>
@@ -132,7 +105,7 @@ function OrderDetailsModal({ isOpen, onClose, order }) {
                                                         <div key={index} className="flex justify-between items-center">
                                                             <div>
                                                                 <p className="font-medium text-gray-900">
-                                                                    {item.quantity}x {item.name}
+                                                                    {item.quantity}x {item.menuItem.name}
                                                                 </p>
                                                                 <p className="text-sm text-gray-500">
                                                                     ${item.price.toFixed(2)} each
@@ -164,20 +137,71 @@ function OrderDetailsModal({ isOpen, onClose, order }) {
 }
 
 export default function OrderHistory() {
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showOrderDetails, setShowOrderDetails] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ordersPerPage = 8;
 
-    const filteredOrders = orderHistory.filter(order =>
-        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.table.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.server.toLowerCase().includes(searchQuery.toLowerCase())
+    useEffect(() => {
+        fetchOrders();
+    }, []);
+
+    const fetchOrders = async () => {
+        try {
+            setLoading(true);
+            const response = await getAllOrders();
+            setOrders(response.data.orders);
+        } catch (err) {
+            setError('Failed to fetch orders');
+            console.error('Error fetching orders:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredOrders = orders.filter(order =>
+        order._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        `Table ${order.table?.number}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.status.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Calculate pagination
+    const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+    const startIndex = (currentPage - 1) * ordersPerPage;
+    const paginatedOrders = filteredOrders.slice(startIndex, startIndex + ordersPerPage);
 
     const handleViewOrder = (order) => {
         setSelectedOrder(order);
         setShowOrderDetails(true);
     };
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page);
+    };
+
+    if (loading) {
+        return (
+            <DashboardLayout navigation={navigation}>
+                <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500" />
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    if (error) {
+        return (
+            <DashboardLayout navigation={navigation}>
+                <div className="flex items-center justify-center h-full">
+                    <div className="text-red-500">{error}</div>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout navigation={navigation}>
@@ -224,7 +248,6 @@ export default function OrderHistory() {
                                             <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Order ID</th>
                                             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date & Time</th>
                                             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Table</th>
-                                            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Server</th>
                                             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Items</th>
                                             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Total</th>
                                             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
@@ -234,20 +257,25 @@ export default function OrderHistory() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 bg-white">
-                                        {filteredOrders.map((order) => (
-                                            <tr key={order.id}>
-                                                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{order.id}</td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{order.date}</td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{order.table}</td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{order.server}</td>
+                                        {paginatedOrders.map((order) => (
+                                            <tr key={order._id}>
+                                                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                                                    #{order._id.slice(-6)}
+                                                </td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                    {formatDate(order.createdAt)}
+                                                </td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">Table {order.table?.number}</td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{order.items.length} items</td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">${order.total.toFixed(2)}</td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status === 'Completed'
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status === 'completed'
                                                         ? 'bg-green-100 text-green-800'
-                                                        : 'bg-yellow-100 text-yellow-800'
+                                                        : order.status === 'cancelled'
+                                                            ? 'bg-red-100 text-red-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
                                                         }`}>
-                                                        {order.status}
+                                                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                                                     </span>
                                                 </td>
                                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
@@ -262,9 +290,43 @@ export default function OrderHistory() {
                                         ))}
                                     </tbody>
                                 </table>
-                                <div className="bg-white px-4 py-3 sm:px-6">
-                                    <div className="text-sm text-gray-700">
-                                        Showing {filteredOrders.length} of {orderHistory.length} orders
+
+                                {/* Pagination */}
+                                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                                    <div className="flex-1 flex justify-between items-center">
+                                        <div>
+                                            <p className="text-sm text-gray-700">
+                                                Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                                                <span className="font-medium">
+                                                    {Math.min(startIndex + ordersPerPage, filteredOrders.length)}
+                                                </span>{' '}
+                                                of <span className="font-medium">{filteredOrders.length}</span> orders
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handlePageChange(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                                className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
+                                                    ${currentPage === 1
+                                                        ? 'text-gray-400 bg-gray-50'
+                                                        : 'text-gray-700 bg-white hover:bg-gray-50'
+                                                    } border border-gray-300`}
+                                            >
+                                                <ChevronLeftIcon className="h-5 w-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handlePageChange(currentPage + 1)}
+                                                disabled={currentPage === totalPages}
+                                                className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
+                                                    ${currentPage === totalPages
+                                                        ? 'text-gray-400 bg-gray-50'
+                                                        : 'text-gray-700 bg-white hover:bg-gray-50'
+                                                    } border border-gray-300`}
+                                            >
+                                                <ChevronRightIcon className="h-5 w-5" />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
