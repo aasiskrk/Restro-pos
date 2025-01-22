@@ -4,39 +4,61 @@ const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const path = require("path");
 const fs = require("fs");
+const bcrypt = require("bcrypt");
 
 // Staff CRUD Operations
-exports.createStaff = catchAsync(async (req, res) => {
-  const staffData = {
-    ...req.body,
-    admin: req.body.admin || "677299c68b74458eff99d36b", // Default admin ID
-    restaurant: req.body.restaurant || "677299bd8b74458eff99d367", // Default restaurant ID
-  };
+exports.createStaff = catchAsync(async (req, res, next) => {
+  try {
+    console.log("Creating staff with data:", req.body);
+    console.log("Files received:", req.files);
 
-  // Handle profile picture upload
-  if (req.files && req.files.profilePicture) {
-    const profilePic = req.files.profilePicture;
-    const imageName = `${Date.now()}-${profilePic.name}`;
-    const uploadPath = path.join(__dirname, "../public/staff", imageName);
+    const staffData = {
+      ...req.body,
+      admin: req.body.admin, // Default admin ID
+      restaurant: req.body.restaurant, // Default restaurant ID
+    };
 
-    try {
-      await profilePic.mv(uploadPath);
-      staffData.profilePicture = imageName;
-    } catch (error) {
-      console.error("Error uploading profile picture:", error);
-      return next(new AppError("Error uploading profile picture", 500));
+    // Handle profile picture upload
+    if (req.files && req.files.profilePicture) {
+      const profilePic = req.files.profilePicture;
+
+      // Validate file type
+      if (!profilePic.mimetype.startsWith("image/")) {
+        return next(new AppError("Please upload an image file", 400));
+      }
+
+      // Create upload directory if it doesn't exist
+      const uploadDir = path.join(__dirname, "../public/staff");
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const imageName = `staff-${Date.now()}${path.extname(profilePic.name)}`;
+      const uploadPath = path.join(uploadDir, imageName);
+
+      try {
+        await profilePic.mv(uploadPath);
+        staffData.profilePicture = imageName;
+      } catch (error) {
+        console.error("Error uploading profile picture:", error);
+        return next(new AppError("Error uploading profile picture", 500));
+      }
     }
+
+    // Create staff in database
+    const newStaff = await Staff.create(staffData);
+
+    // Remove password from response
+    newStaff.password = undefined;
+
+    res.status(201).json({
+      status: "success",
+      data: newStaff,
+    });
+  } catch (error) {
+    console.error("Error in createStaff:", error);
+    return next(new AppError(error.message || "Error creating staff", 500));
   }
-
-  const newStaff = await Staff.create(staffData);
-
-  // Remove password from response
-  newStaff.password = undefined;
-
-  res.status(201).json({
-    status: "success",
-    data: newStaff,
-  });
 });
 
 exports.getAllStaff = catchAsync(async (req, res) => {
@@ -63,19 +85,69 @@ exports.getStaff = catchAsync(async (req, res, next) => {
 });
 
 exports.updateStaff = catchAsync(async (req, res, next) => {
-  const staff = await Staff.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  }).select("-password");
+  try {
+    const updateData = { ...req.body };
 
-  if (!staff) {
-    return next(new AppError("No staff found with that ID", 404));
+    // Handle password update
+    if (updateData.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(updateData.password, salt);
+    } else {
+      delete updateData.password; // Don't update password if not provided
+    }
+
+    // Handle file upload
+    if (req.files && req.files.profilePicture) {
+      const file = req.files.profilePicture;
+
+      // Validate file type
+      if (!file.mimetype.startsWith("image/")) {
+        return next(new AppError("Please upload an image file", 400));
+      }
+
+      // Create unique filename
+      const fileName = `staff-${req.params.id}-${Date.now()}${path.extname(
+        file.name
+      )}`;
+      const uploadDir = path.join(__dirname, "../public/staff");
+      const uploadPath = path.join(uploadDir, fileName);
+
+      // Create directory if it doesn't exist
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      // Delete old profile picture if exists
+      const oldStaff = await Staff.findById(req.params.id);
+      if (oldStaff && oldStaff.profilePicture) {
+        const oldPicturePath = path.join(uploadDir, oldStaff.profilePicture);
+        if (fs.existsSync(oldPicturePath)) {
+          fs.unlinkSync(oldPicturePath);
+        }
+      }
+
+      // Move the new file
+      await file.mv(uploadPath);
+      updateData.profilePicture = fileName;
+    }
+
+    const staff = await Staff.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!staff) {
+      return next(new AppError("No staff found with that ID", 404));
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: staff,
+    });
+  } catch (error) {
+    console.error("Error in updateStaff:", error);
+    return next(new AppError(error.message || "Error updating staff", 500));
   }
-
-  res.status(200).json({
-    status: "success",
-    data: staff,
-  });
 });
 
 exports.deleteStaff = catchAsync(async (req, res, next) => {
@@ -167,3 +239,62 @@ exports.updateAttendanceStatus = catchAsync(async (req, res, next) => {
     data: attendance,
   });
 });
+
+// Update staff profile picture
+exports.updateStaffProfilePicture = async (req, res) => {
+  try {
+    if (!req.files || !req.files.profilePicture) {
+      return res.status(400).json({
+        status: "fail",
+        message: "No profile picture uploaded",
+      });
+    }
+
+    const file = req.files.profilePicture;
+    const staff = req.user;
+
+    // Validate file type
+    if (!file.mimetype.startsWith("image")) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Please upload an image file",
+      });
+    }
+
+    // Create unique filename
+    const fileName = `staff-${staff._id}-${Date.now()}${path.extname(
+      file.name
+    )}`;
+    const uploadPath = path.join(
+      __dirname,
+      "../public/uploads/staff",
+      fileName
+    );
+
+    // Create directory if it doesn't exist
+    const uploadDir = path.join(__dirname, "../public/uploads/staff");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Move file to upload directory
+    await file.mv(uploadPath);
+
+    // Update staff profile picture in database
+    staff.profilePicture = `/uploads/staff/${fileName}`;
+    await staff.save();
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        profilePicture: staff.profilePicture,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Error updating profile picture",
+    });
+  }
+};

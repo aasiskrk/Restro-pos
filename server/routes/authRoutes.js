@@ -42,6 +42,13 @@ router.put(
   authController.changePassword
 );
 
+// Profile picture update
+router.put(
+  "/update-profile-picture",
+  protect,
+  authController.updateProfilePicture
+);
+
 // Restaurant routes (admin only)
 router.get("/restaurant", protect, authController.getRestaurantDetails);
 router.put(

@@ -136,109 +136,6 @@ exports.handleQRPayment = async (req, res) => {
   }
 };
 
-// Initiate eSewa payment
-exports.initiateEsewaPayment = async (req, res) => {
-  try {
-    const { orderId, amount } = req.body;
-
-    // Validate order exists
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    // Create payment record
-    const payment = await Payment.create({
-      orderId,
-      paymentMethod: "eSewa",
-      amount,
-      paymentStatus: "pending",
-    });
-
-    // Update order with payment reference
-    await Order.findByIdAndUpdate(orderId, {
-      payment: payment._id,
-    });
-
-    // Generate eSewa payment parameters
-    const esewaParams = {
-      amt: amount,
-      psc: 0,
-      pdc: 0,
-      txAmt: 0,
-      tAmt: amount,
-      pid: payment._id.toString(),
-      scd: ESEWA_TEST_MERCHANT_ID,
-      su: ESEWA_TEST_SUCCESS_URL,
-      fu: ESEWA_TEST_FAILURE_URL,
-    };
-
-    res.status(200).json({
-      success: true,
-      payment,
-      esewaParams,
-      esewaUrl: ESEWA_TEST_URL,
-    });
-  } catch (error) {
-    console.error("Error initiating eSewa payment:", error);
-    res.status(500).json({
-      message: "Error initiating payment",
-      error: error.message,
-    });
-  }
-};
-
-exports.handleEsewaSuccess = async (req, res) => {
-  try {
-    const { oid, amt, refId } = req.query;
-
-    // Find payment record
-    const payment = await Payment.findById(oid);
-    if (!payment) {
-      return res.status(404).json({ message: "Payment not found" });
-    }
-
-    // Update payment status
-    payment.paymentStatus = "completed";
-    payment.transactionId = refId;
-    await payment.save();
-
-    // Update order status and payment status
-    await Order.findByIdAndUpdate(payment.orderId, {
-      status: "completed",
-      payment: payment._id,
-      paymentStatus: "paid",
-    });
-
-    // Redirect to success page
-    res.redirect(
-      `${process.env.CLIENT_URL}/cashier/checkout?status=success&oid=${oid}`
-    );
-  } catch (error) {
-    console.error("Error handling eSewa success:", error);
-    res.redirect(`${process.env.CLIENT_URL}/cashier/checkout?status=error`);
-  }
-};
-
-exports.handleEsewaFailure = async (req, res) => {
-  try {
-    const { oid } = req.query;
-
-    // Update payment status to failed
-    await Payment.findByIdAndUpdate(oid, {
-      paymentStatus: "failed",
-    });
-
-    // Redirect to failure page
-    res.redirect(
-      `${process.env.CLIENT_URL}/cashier/checkout?status=failure&oid=${oid}`
-    );
-  } catch (error) {
-    console.error("Error handling eSewa failure:", error);
-    res.redirect(`${process.env.CLIENT_URL}/cashier/checkout?status=error`);
-  }
-};
-
 exports.getPaymentStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -290,14 +187,21 @@ exports.getAllPayments = async (req, res) => {
       ];
     }
 
-    // Get payments with populated order details
+    // Get payments with populated order details including table
     const payments = await Payment.find(query)
       .populate({
         path: "orderId",
-        populate: {
-          path: "items.menuItem",
-          model: "MenuItem",
-        },
+        populate: [
+          {
+            path: "items.menuItem",
+            model: "MenuItem",
+          },
+          {
+            path: "table",
+            model: "Table",
+            select: "number",
+          },
+        ],
       })
       .sort({ createdAt: -1 });
 

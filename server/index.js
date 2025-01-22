@@ -31,7 +31,7 @@ app.use(
   fileUpload({
     createParentPath: true,
     limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB max file size
+      fileSize: 10 * 1024 * 1024, // 5MB max file size
     },
     abortOnLimit: true,
   })
@@ -84,6 +84,9 @@ if (!fs.existsSync(menuUploadDir)) {
 if (!fs.existsSync(staffUploadDir)) {
   fs.mkdirSync(staffUploadDir, { recursive: true });
 }
+
+// Serve static files
+app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {

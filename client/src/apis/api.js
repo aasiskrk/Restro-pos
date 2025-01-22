@@ -50,7 +50,19 @@ export const loginApi = (data) => Api.post("/auth/login", data);
 export const getCurrentUserApi = () => Api.get("/auth/me");
 export const updateProfileApi = (data) => Api.put("/auth/update-profile", data);
 export const changePasswordApi = (data) =>
-  Api.post("/auth/change-password", data);
+  Api.put("/auth/change-password", data);
+export const adminChangePasswordApi = (data) =>
+  Api.put("/users/change-password", data);
+export const updateProfilePictureApi = (formData, isStaff = false) => {
+  const endpoint = isStaff
+    ? "/staff/update-profile-picture"
+    : "/auth/update-profile-picture";
+  return Api.put(endpoint, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
 export const forgotPasswordApi = (data) =>
   Api.post("/auth/forgot-password", data);
 export const resetPasswordApi = (data) =>
@@ -98,12 +110,19 @@ export const toggleMenuItemAvailabilityApi = (id) =>
 
 // Staff Management APIs
 export const createStaff = async (staffData) => {
-  const response = await Api.post("/staff", staffData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-  return response.data;
+  try {
+    console.log("Sending staff data:", staffData);
+    const response = await Api.post("/staff", staffData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    console.log("Staff creation response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating staff:", error);
+    throw error;
+  }
 };
 
 export const getAllStaff = async () => {
@@ -117,7 +136,11 @@ export const getStaff = async (id) => {
 };
 
 export const updateStaff = async (id, staffData) => {
-  const response = await Api.patch(`/staff/${id}`, staffData);
+  const response = await Api.patch(`/staff/${id}`, staffData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data;
 };
 

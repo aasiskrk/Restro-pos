@@ -126,6 +126,12 @@ function ViewPaymentModal({ isOpen, onClose, payment }) {
                                             <p className="mt-1 text-sm text-gray-900">{formatDate(payment.createdAt)}</p>
                                         </div>
                                         <div>
+                                            <p className="text-sm font-medium text-gray-500">Table Number</p>
+                                            <p className="mt-1 text-sm text-gray-900">
+                                                Table {payment.orderId.table?.number || 'N/A'}
+                                            </p>
+                                        </div>
+                                        <div>
                                             <p className="text-sm font-medium text-gray-500">Payment Method</p>
                                             <div className="mt-1 flex items-center gap-2">
                                                 {getPaymentMethodIcon(payment.paymentMethod)}
@@ -416,6 +422,10 @@ export default function PaymentHistory() {
                         <p>
                             <span>Receipt No:</span>
                             <span>#${payment._id.slice(-6)}</span>
+                        </p>
+                        <p>
+                            <span>Table Number:</span>
+                            <span>Table ${payment.orderId.table?.number || 'N/A'}</span>
                         </p>
                         <p>
                             <span>Date:</span>

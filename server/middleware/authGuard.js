@@ -319,7 +319,7 @@ const fileUploadHandler = (req, res, next) => {
   }
 
   const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  const maxSize = 10 * 1024 * 1024; // 5MB
 
   // Check each uploaded file
   Object.values(req.files).forEach((file) => {
@@ -333,7 +333,7 @@ const fileUploadHandler = (req, res, next) => {
     if (file.size > maxSize) {
       return res.status(400).json({
         success: false,
-        message: "File too large. Maximum size is 5MB",
+        message: "File too large. Maximum size is 10MB",
       });
     }
   });

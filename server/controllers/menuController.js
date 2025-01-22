@@ -132,77 +132,67 @@ const deleteCategory = async (req, res) => {
 
 // Menu Item Controllers
 const createMenuItem = async (req, res) => {
-  const { name, description, price, category, stock } = req.body;
-  let image = null;
-
-  if (!name || !description || !price || !category || stock === undefined) {
-    return res.status(400).json({
-      success: false,
-      message: "Please provide all required fields",
-    });
-  }
-
   try {
-    // Verify category exists
-    const categoryExists = await Category.findById(category);
-    if (!categoryExists) {
+    const { name, description, category, price, stock } = req.body;
+
+    // Validate required fields
+    if (!name || !category || !price) {
       return res.status(400).json({
         success: false,
-        message: "Invalid category",
+        message: "Name, category, and price are required",
       });
     }
 
-    // Handle image upload if present
-    if (req.files && req.files.image) {
-      const menuImage = req.files.image;
-      const imageName = `${Date.now()}-${menuImage.name}`;
-      const imageUploadPath = path.join(__dirname, "../public/menu", imageName);
+    let imageFileName = null;
 
-      try {
-        await menuImage.mv(imageUploadPath);
-        image = imageName;
-      } catch (error) {
-        console.error("Error uploading image:", error);
-        return res.status(500).json({
+    // Handle image upload
+    if (req.files && req.files.image) {
+      const file = req.files.image;
+
+      // Validate file type
+      if (!file.mimetype.startsWith("image/")) {
+        return res.status(400).json({
           success: false,
-          message: "Error uploading image",
+          message: "Please upload an image file",
         });
       }
+
+      // Create unique filename
+      imageFileName = `menu-${Date.now()}${path.extname(file.name)}`;
+      const uploadDir = path.join(__dirname, "../public/menu");
+      const uploadPath = path.join(uploadDir, imageFileName);
+
+      // Create directory if it doesn't exist
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      // Move the file
+      await file.mv(uploadPath);
     }
 
     const menuItem = new MenuItem({
       name,
       description,
-      price: parseFloat(price),
       category,
-      stock: parseInt(stock),
-      image,
+      price,
+      stock,
+      image: imageFileName,
     });
 
     await menuItem.save();
 
-    const populatedMenuItem = await MenuItem.findById(menuItem._id).populate(
-      "category",
-      "name"
-    );
-
     res.status(201).json({
       success: true,
       message: "Menu item created successfully",
-      menuItem: populatedMenuItem,
+      menuItem,
     });
   } catch (error) {
-    // Delete uploaded image if menu item creation fails
-    if (image) {
-      const imagePath = path.join(__dirname, "../public/menu", image);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
-    }
-    console.error(error);
+    console.error("Error creating menu item:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Error creating menu item",
+      error: error.message,
     });
   }
 };
@@ -245,73 +235,51 @@ const getMenuItemsByCategory = async (req, res) => {
 };
 
 const updateMenuItem = async (req, res) => {
-  const { id } = req.params;
-  const updateData = { ...req.body };
-  delete updateData.image; // Remove image from updateData as we'll handle it separately
-
   try {
-    const menuItem = await MenuItem.findById(id);
-    if (!menuItem) {
-      return res.status(404).json({
-        success: false,
-        message: "Menu item not found",
-      });
-    }
+    const { id } = req.params;
+    const updateData = { ...req.body };
 
-    if (updateData.category) {
-      // Verify category exists
-      const categoryExists = await Category.findById(updateData.category);
-      if (!categoryExists) {
+    // Handle image upload
+    if (req.files && req.files.image) {
+      const file = req.files.image;
+
+      // Validate file type
+      if (!file.mimetype.startsWith("image/")) {
         return res.status(400).json({
           success: false,
-          message: "Invalid category",
+          message: "Please upload an image file",
         });
       }
-    }
 
-    // Convert price and stock to numbers
-    if (updateData.price) updateData.price = parseFloat(updateData.price);
-    if (updateData.stock) updateData.stock = parseInt(updateData.stock);
+      // Create unique filename
+      const imageFileName = `menu-${Date.now()}${path.extname(file.name)}`;
+      const uploadDir = path.join(__dirname, "../public/menu");
+      const uploadPath = path.join(uploadDir, imageFileName);
 
-    // Handle image upload if present
-    if (req.files && req.files.image) {
-      const menuImage = req.files.image;
-      const imageName = `${Date.now()}-${menuImage.name}`;
-      const imageUploadPath = path.join(__dirname, "../public/menu", imageName);
+      // Create directory if it doesn't exist
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
 
-      try {
-        // Delete old image if exists
-        if (menuItem.image) {
-          const oldImagePath = path.join(
-            __dirname,
-            "../public/menu",
-            menuItem.image
-          );
-          if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
-          }
+      // Delete old image if exists
+      const oldMenuItem = await MenuItem.findById(id);
+      if (oldMenuItem && oldMenuItem.image) {
+        const oldImagePath = path.join(uploadDir, oldMenuItem.image);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
         }
-
-        // Upload new image
-        await menuImage.mv(imageUploadPath);
-        updateData.image = imageName;
-      } catch (error) {
-        console.error("Error uploading image:", error);
-        return res.status(500).json({
-          success: false,
-          message: "Error uploading image",
-        });
       }
+
+      // Move the new file
+      await file.mv(uploadPath);
+      updateData.image = imageFileName;
     }
 
-    // Update the menu item and populate category
-    const updatedMenuItem = await MenuItem.findByIdAndUpdate(
-      id,
-      { ...updateData, updatedAt: Date.now() },
-      { new: true }
-    ).populate("category", "name");
+    const menuItem = await MenuItem.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
 
-    if (!updatedMenuItem) {
+    if (!menuItem) {
       return res.status(404).json({
         success: false,
         message: "Menu item not found",
@@ -321,13 +289,13 @@ const updateMenuItem = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Menu item updated successfully",
-      menuItem: updatedMenuItem,
+      menuItem,
     });
   } catch (error) {
-    console.error("Update error:", error);
+    console.error("Error updating menu item:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Error updating menu item",
       error: error.message,
     });
   }

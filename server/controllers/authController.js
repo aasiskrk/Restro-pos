@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const Restaurant = require("../models/restaurantModel");
 const Staff = require("../models/staffModel");
+const path = require("path");
+const fs = require("fs");
 
 // Register a new restaurant
 exports.register = async (req, res) => {
@@ -648,6 +650,63 @@ exports.updateRestaurantDetails = async (req, res) => {
       success: false,
       message: "Error updating restaurant details",
       error: error.message,
+    });
+  }
+};
+
+// Update profile picture
+exports.updateProfilePicture = async (req, res) => {
+  try {
+    if (!req.files || !req.files.profilePicture) {
+      return res.status(400).json({
+        status: "fail",
+        message: "No profile picture uploaded",
+      });
+    }
+
+    const file = req.files.profilePicture;
+    const user = req.user;
+
+    // Validate file type
+    if (!file.mimetype.startsWith("image")) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Please upload an image file",
+      });
+    }
+
+    // Create unique filename
+    const fileName = `user-${user._id}-${Date.now()}${path.extname(file.name)}`;
+    const uploadPath = path.join(
+      __dirname,
+      "../public/uploads/users",
+      fileName
+    );
+
+    // Create directory if it doesn't exist
+    const uploadDir = path.join(__dirname, "../public/uploads/users");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Move file to upload directory
+    await file.mv(uploadPath);
+
+    // Update user profile picture in database
+    user.profilePicture = `/uploads/users/${fileName}`;
+    await user.save();
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        profilePicture: user.profilePicture,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Error updating profile picture",
     });
   }
 };

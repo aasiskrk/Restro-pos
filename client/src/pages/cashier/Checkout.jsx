@@ -34,7 +34,8 @@ function QRModal({ isOpen, onClose, totalAmount, orderId, onPaymentComplete }) {
         try {
             const paymentResponse = await processQRPayment({
                 orderId: orderId,
-                amount: totalAmount
+                amount: totalAmount,
+                paymentStatus: 'paid'
             });
 
             if (paymentResponse.success) {
@@ -67,27 +68,54 @@ function QRModal({ isOpen, onClose, totalAmount, orderId, onPaymentComplete }) {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
-                    className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4"
+                    className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4"
                 >
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Scan QR Code to Pay</h3>
-                    <div className="flex justify-center mb-4">
-                        <img src={qrCodeUrl} alt="Payment QR Code" className="w-48 h-48" />
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-medium text-gray-900">Scan QR Code to Pay</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+                            <XMarkIcon className="h-6 w-6" />
+                        </button>
                     </div>
-                    <p className="text-sm text-gray-500 mb-4 text-center">
-                        Amount to Pay: ${totalAmount.toFixed(2)}
+
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div className="text-sm text-gray-600 space-y-2">
+                            <div className="flex justify-between">
+                                <span>Order ID:</span>
+                                <span className="font-medium">#{orderId.slice(-6)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Amount:</span>
+                                <span className="font-medium">{formatCurrency(totalAmount)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Status:</span>
+                                <span className="text-orange-600 font-medium">Pending Payment</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center mb-4">
+                        <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200">
+                            <img src={qrCodeUrl} alt="Payment QR Code" className="w-64 h-64" />
+                        </div>
+                    </div>
+
+                    <p className="text-sm text-gray-500 mb-6 text-center">
+                        Scan this QR code with your mobile payment app to complete the payment
                     </p>
-                    <div className="flex justify-between">
+
+                    <div className="flex justify-between gap-3">
                         <button
-                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
                             onClick={onClose}
                         >
-                            Close
+                            Cancel
                         </button>
                         <button
-                            className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
+                            className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
                             onClick={handleQRPayment}
                         >
-                            Mark as Paid
+                            Confirm Payment
                         </button>
                     </div>
                 </motion.div>
@@ -101,8 +129,6 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
     const [amountReceived, setAmountReceived] = useState('');
     const [change, setChange] = useState(0);
     const [splitCount, setSplitCount] = useState(1);
-    const [tip, setTip] = useState(0);
-    const [tipType, setTipType] = useState('percent');
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState('percent');
     const [selectedItems, setSelectedItems] = useState({});
@@ -115,26 +141,12 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
         { id: 'qr', name: 'QR Code Payment', icon: QrCodeIcon },
     ];
 
-    const tipOptions = [
-        { value: 0, label: 'No Tip' },
-        { value: 10, label: '10%' },
-        { value: 15, label: '15%' },
-        { value: 20, label: '20%' },
-    ];
-
     const calculateSubtotal = (items) => {
         if (!items) return 0;
         return items.reduce((sum, item) => {
             const price = item.menuItem?.price || item.price || 0;
             return sum + (item.quantity * price);
         }, 0);
-    };
-
-    const calculateTip = (subtotal) => {
-        if (tipType === 'percent') {
-            return subtotal * (tip / 100);
-        }
-        return parseFloat(tip) || 0;
     };
 
     const calculateDiscount = (subtotal) => {
@@ -144,12 +156,19 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
         return parseFloat(discount) || 0;
     };
 
+    const calculateTax = (subtotal) => {
+        return subtotal * 0.08; // 8% tax
+    };
+
     const calculateTotal = () => {
         const subtotal = calculateSubtotal(table.items);
-        const tipAmount = calculateTip(subtotal);
         const discountAmount = calculateDiscount(subtotal);
-        const tax = subtotal * 0.08;
-        return (subtotal + tipAmount + tax - discountAmount) / splitCount;
+        const tax = calculateTax(subtotal);
+        return subtotal + tax - discountAmount;
+    };
+
+    const calculatePerPersonAmount = () => {
+        return calculateTotal() / splitCount;
     };
 
     const handleAmountReceivedChange = (value) => {
@@ -176,35 +195,39 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
             setPaymentProcessing(true);
             setPaymentError(null);
 
-            if (selectedPaymentMethod === 'cash') {
-                try {
-                    const paymentResponse = await processCashPayment({
-                        orderId: table._id,
-                        amount: calculateTotal() * splitCount,
-                        amountReceived: parseFloat(amountReceived),
-                        change: change,
-                        paymentStatus: 'paid'
-                    });
+            const totalAmount = calculateTotal();
+            const paymentData = {
+                orderId: table._id,
+                amount: totalAmount,
+                amountReceived: parseFloat(amountReceived),
+                change: change,
+                paymentStatus: 'paid',
+                splitCount: splitCount,
+                discount: {
+                    amount: calculateDiscount(calculateSubtotal(table.items)),
+                    type: discountType,
+                    percentage: discountType === 'percent' ? discount : null
+                },
+                tax: calculateTax(calculateSubtotal(table.items))
+            };
 
-                    if (paymentResponse.success) {
-                        onPaymentComplete();
-                        onClose();
-                        toast.success('Payment processed successfully');
-                    } else {
-                        throw new Error(paymentResponse.message || 'Failed to process cash payment');
-                    }
-                } catch (error) {
-                    console.error('Cash payment error:', error);
-                    toast.error(error.message || 'Failed to process cash payment. Please try again.');
-                    setPaymentError(error.message || 'Failed to process cash payment. Please try again.');
+            if (selectedPaymentMethod === 'cash') {
+                const paymentResponse = await processCashPayment(paymentData);
+
+                if (paymentResponse.success) {
+                    onPaymentComplete();
+                    onClose();
+                    toast.success('Payment processed successfully');
+                } else {
+                    throw new Error(paymentResponse.message || 'Failed to process cash payment');
                 }
             } else if (selectedPaymentMethod === 'qr') {
                 setShowQRModal(true);
             }
         } catch (error) {
             console.error('Payment error:', error);
-            toast.error('Failed to process payment. Please try again.');
-            setPaymentError('Failed to process payment. Please try again.');
+            toast.error(error.message || 'Failed to process payment. Please try again.');
+            setPaymentError(error.message || 'Failed to process payment. Please try again.');
         } finally {
             setPaymentProcessing(false);
         }
@@ -239,8 +262,10 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
                                     <div className="px-6 py-4 border-b border-gray-200">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <h2 className="text-xl font-semibold text-gray-900">Checkout</h2>
-                                                <p className="mt-1 text-sm text-gray-500">Table #{table.number}</p>
+                                                <h2 className="text-xl font-semibold text-gray-900">Process Payment</h2>
+                                                <p className="mt-1 text-sm text-gray-500">
+                                                    Table {table?.table?.number || 'Loading...'}
+                                                </p>
                                             </div>
                                             <button onClick={onClose}>
                                                 <XMarkIcon className="h-6 w-6 text-gray-400" />
@@ -258,7 +283,11 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
                                                     <div className="flex items-center justify-between mb-4">
                                                         <div>
                                                             <h3 className="text-lg font-medium text-gray-900">Split Bill</h3>
-                                                            <p className="text-sm text-gray-500 mt-1">Divide the bill between multiple people</p>
+                                                            <p className="text-sm text-gray-500 mt-1">
+                                                                {splitCount > 1
+                                                                    ? `Splitting ${formatCurrency(calculateTotal())} between ${splitCount} people`
+                                                                    : 'Divide the bill between multiple people'}
+                                                            </p>
                                                         </div>
                                                         <div className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-200 shadow-sm">
                                                             <button
@@ -270,7 +299,9 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
                                                             </button>
                                                             <div className="flex items-center gap-2 px-3">
                                                                 <UsersIcon className="h-5 w-5 text-orange-500" />
-                                                                <span className="text-lg font-medium text-gray-900 min-w-[1.5rem] text-center">{splitCount}</span>
+                                                                <span className="text-lg font-medium text-gray-900 min-w-[1.5rem] text-center">
+                                                                    {splitCount}
+                                                                </span>
                                                             </div>
                                                             <button
                                                                 onClick={() => handleSplitBill('increase')}
@@ -280,134 +311,56 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
                                                             </button>
                                                         </div>
                                                     </div>
+                                                    {splitCount > 1 && (
+                                                        <div className="mt-2 p-3 bg-white rounded-lg border border-orange-100">
+                                                            <p className="text-sm text-gray-600">
+                                                                Each person pays: <span className="font-medium text-orange-600">{formatCurrency(calculatePerPersonAmount())}</span>
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </div>
 
-                                                {/* Order Summary */}
-                                                <div>
-                                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h3>
-                                                    <div className="bg-gray-50 rounded-lg p-6">
-                                                        <div className="space-y-4">
-                                                            {table.items?.map((item, index) => (
-                                                                <div key={index} className="flex justify-between items-center">
-                                                                    <div>
-                                                                        <p className="font-medium text-gray-900">
-                                                                            {item.quantity}x {item.menuItem?.name || 'Unknown Item'}
-                                                                        </p>
-                                                                        <p className="text-sm text-gray-500">
-                                                                            ${(item.menuItem?.price || item.price || 0).toFixed(2)} each
-                                                                        </p>
-                                                                    </div>
+                                                {/* Order Summary with enhanced UI */}
+                                                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                                                    <div className="p-4 border-b border-gray-200">
+                                                        <h3 className="text-lg font-medium text-gray-900">Order Summary</h3>
+                                                    </div>
+                                                    <div className="p-4 space-y-4">
+                                                        {table.items?.map((item, index) => (
+                                                            <div key={index} className="flex justify-between items-start">
+                                                                <div>
                                                                     <p className="font-medium text-gray-900">
-                                                                        ${((item.menuItem?.price || item.price || 0) * item.quantity).toFixed(2)}
+                                                                        {item.quantity}x {item.menuItem?.name || 'Unknown Item'}
+                                                                    </p>
+                                                                    <p className="text-sm text-gray-500">
+                                                                        {formatCurrency(item.menuItem?.price || item.price || 0)} each
                                                                     </p>
                                                                 </div>
-                                                            )) || <p className="text-gray-500">No items in order</p>}
-                                                        </div>
-
-                                                        {/* Calculations */}
-                                                        <div className="border-t border-gray-200 mt-6 pt-6 space-y-4">
-                                                            <div className="flex justify-between items-center">
-                                                                <p className="text-gray-600">Subtotal</p>
                                                                 <p className="font-medium text-gray-900">
-                                                                    ${calculateSubtotal(table.items).toFixed(2)}
+                                                                    {formatCurrency((item.menuItem?.price || item.price || 0) * item.quantity)}
                                                                 </p>
                                                             </div>
+                                                        ))}
 
-                                                            {/* Tip Section - Streamlined */}
-                                                            <div className="flex items-center justify-between gap-4 bg-gray-100/50 rounded-lg p-4 border border-gray-200">
-                                                                <div className="flex items-center gap-3 flex-1">
-                                                                    <p className="font-medium text-gray-900 whitespace-nowrap">Tip</p>
-                                                                    <div className="flex gap-2">
-                                                                        {tipOptions.map((option) => (
-                                                                            <button
-                                                                                key={option.value}
-                                                                                onClick={() => {
-                                                                                    setTip(option.value);
-                                                                                    setTipType('percent');
-                                                                                }}
-                                                                                className={`${buttonBaseClasses} px-4 ${tip === option.value && tipType === 'percent'
-                                                                                    ? 'bg-orange-100 text-orange-700 ring-2 ring-orange-200'
-                                                                                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                                                                    }`}
-                                                                            >
-                                                                                {option.label}
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                    <div className="relative w-28">
-                                                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                                            <span className="text-gray-500 sm:text-sm">$</span>
-                                                                        </div>
-                                                                        <input
-                                                                            type="number"
-                                                                            value={tipType === 'amount' ? tip : ''}
-                                                                            onChange={(e) => {
-                                                                                setTip(e.target.value);
-                                                                                setTipType('amount');
-                                                                            }}
-                                                                            placeholder="Custom"
-                                                                            className={`${inputBaseClasses} pl-7`}
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                                <p className="font-medium text-gray-900 whitespace-nowrap">
-                                                                    ${calculateTip(calculateSubtotal(table.items)).toFixed(2)}
-                                                                </p>
+                                                        <div className="pt-4 space-y-3 border-t border-gray-200">
+                                                            <div className="flex justify-between text-gray-600">
+                                                                <span>Subtotal</span>
+                                                                <span>{formatCurrency(calculateSubtotal(table.items))}</span>
                                                             </div>
-
-                                                            {/* Discount Section - Streamlined */}
-                                                            <div className="flex items-center justify-between gap-4 bg-gray-100/50 rounded-lg p-4 border border-gray-200">
-                                                                <div className="flex items-center gap-3 flex-1">
-                                                                    <p className="font-medium text-gray-900 whitespace-nowrap">Discount</p>
-                                                                    <div className="flex gap-2 items-center">
-                                                                        <div className="relative w-32">
-                                                                            <input
-                                                                                type="number"
-                                                                                value={discount}
-                                                                                onChange={(e) => setDiscount(e.target.value)}
-                                                                                className={inputBaseClasses}
-                                                                                placeholder="Enter discount"
-                                                                            />
-                                                                        </div>
-                                                                        <select
-                                                                            value={discountType}
-                                                                            onChange={(e) => setDiscountType(e.target.value)}
-                                                                            className={`${inputBaseClasses} w-20`}
-                                                                        >
-                                                                            <option value="percent">%</option>
-                                                                            <option value="amount">$</option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <p className="font-medium text-gray-900 whitespace-nowrap">
-                                                                    -${calculateDiscount(calculateSubtotal(table.items)).toFixed(2)}
-                                                                </p>
+                                                            <div className="flex justify-between text-gray-600">
+                                                                <span>Tax (8%)</span>
+                                                                <span>{formatCurrency(calculateTax(calculateSubtotal(table.items)))}</span>
                                                             </div>
-
-                                                            <div className="flex justify-between items-center">
-                                                                <p className="text-gray-600">Tax (8%)</p>
-                                                                <p className="font-medium text-gray-900">
-                                                                    ${(calculateSubtotal(table.items) * 0.08).toFixed(2)}
-                                                                </p>
-                                                            </div>
-
-                                                            {splitCount > 1 && (
-                                                                <div className="pt-4 border-t border-gray-200">
-                                                                    <div className="flex justify-between items-center text-lg font-semibold">
-                                                                        <p className="text-gray-900">Total per person</p>
-                                                                        <p className="text-orange-600">
-                                                                            ${calculateTotal().toFixed(2)}
-                                                                        </p>
-                                                                    </div>
+                                                            {discount > 0 && (
+                                                                <div className="flex justify-between text-red-600">
+                                                                    <span>Discount ({discountType === 'percent' ? `${discount}%` : 'Custom'})</span>
+                                                                    <span>-{formatCurrency(calculateDiscount(calculateSubtotal(table.items)))}</span>
                                                                 </div>
                                                             )}
-
-                                                            <div className="pt-4 border-t border-gray-200">
-                                                                <div className="flex justify-between items-center text-lg font-semibold">
-                                                                    <p className="text-gray-900">Total{splitCount > 1 ? ' (all)' : ''}</p>
-                                                                    <p className="text-orange-600">
-                                                                        ${(calculateTotal() * splitCount).toFixed(2)}
-                                                                    </p>
+                                                            <div className="pt-3 border-t border-gray-200">
+                                                                <div className="flex justify-between text-lg font-semibold">
+                                                                    <span>Total</span>
+                                                                    <span className="text-orange-600">{formatCurrency(calculateTotal())}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -417,70 +370,74 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
 
                                             {/* Right Column - Payment Details */}
                                             <div className="space-y-8">
-                                                {/* Payment Method */}
-                                                <div>
-                                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Method</h3>
-                                                    <div className="grid grid-cols-1 gap-3">
-                                                        {paymentMethods.map((method) => (
-                                                            <button
-                                                                key={method.id}
-                                                                onClick={() => setSelectedPaymentMethod(method.id)}
-                                                                className={`flex items-center justify-between p-4 rounded-lg border shadow-sm transition-all duration-200 ${selectedPaymentMethod === method.id
-                                                                    ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200'
-                                                                    : 'border-gray-200 hover:border-orange-200 hover:bg-orange-50/50'
-                                                                    }`}
-                                                            >
-                                                                <div className="flex items-center gap-3">
-                                                                    <method.icon
-                                                                        className={`h-6 w-6 ${selectedPaymentMethod === method.id
-                                                                            ? 'text-orange-600'
-                                                                            : 'text-gray-400'
-                                                                            }`}
-                                                                    />
-                                                                    <span className="text-base font-medium text-gray-900">
-                                                                        {method.name}
-                                                                    </span>
-                                                                </div>
-                                                                {selectedPaymentMethod === method.id && (
-                                                                    <div className="h-2 w-2 rounded-full bg-orange-500"></div>
-                                                                )}
-                                                            </button>
-                                                        ))}
+                                                {/* Payment Method Selection */}
+                                                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                                                    <div className="p-4 border-b border-gray-200">
+                                                        <h3 className="text-lg font-medium text-gray-900">Payment Method</h3>
+                                                    </div>
+                                                    <div className="p-4">
+                                                        <div className="grid grid-cols-1 gap-3">
+                                                            {paymentMethods.map((method) => (
+                                                                <button
+                                                                    key={method.id}
+                                                                    onClick={() => setSelectedPaymentMethod(method.id)}
+                                                                    className={`flex items-center justify-between p-4 rounded-lg border shadow-sm transition-all duration-200 ${selectedPaymentMethod === method.id
+                                                                        ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200'
+                                                                        : 'border-gray-200 hover:border-orange-200 hover:bg-orange-50/50'
+                                                                        }`}
+                                                                >
+                                                                    <div className="flex items-center gap-3">
+                                                                        <method.icon
+                                                                            className={`h-6 w-6 ${selectedPaymentMethod === method.id
+                                                                                ? 'text-orange-600'
+                                                                                : 'text-gray-400'
+                                                                                }`}
+                                                                        />
+                                                                        <span className="text-base font-medium text-gray-900">
+                                                                            {method.name}
+                                                                        </span>
+                                                                    </div>
+                                                                    {selectedPaymentMethod === method.id && (
+                                                                        <div className="h-2 w-2 rounded-full bg-orange-500" />
+                                                                    )}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 </div>
 
                                                 {/* Cash Payment Details */}
                                                 {selectedPaymentMethod === 'cash' && (
-                                                    <div>
-                                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Cash Details</h3>
-                                                        <div className="bg-gray-100/50 rounded-lg p-6 border border-gray-200">
-                                                            <div className="space-y-6">
-                                                                <div>
-                                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                                        Amount Received
-                                                                    </label>
-                                                                    <div className="relative">
-                                                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                                            <span className="text-gray-500 sm:text-sm">$</span>
-                                                                        </div>
-                                                                        <input
-                                                                            type="number"
-                                                                            value={amountReceived}
-                                                                            onChange={(e) => handleAmountReceivedChange(e.target.value)}
-                                                                            className={`${inputBaseClasses} pl-7 text-lg`}
-                                                                            placeholder="0.00"
-                                                                        />
+                                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                                                        <div className="p-4 border-b border-gray-200">
+                                                            <h3 className="text-lg font-medium text-gray-900">Cash Details</h3>
+                                                        </div>
+                                                        <div className="p-4 space-y-4">
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                                    Amount Received
+                                                                </label>
+                                                                <div className="relative">
+                                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                                        <span className="text-gray-500 sm:text-sm">$</span>
                                                                     </div>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={amountReceived}
+                                                                        onChange={(e) => handleAmountReceivedChange(e.target.value)}
+                                                                        className="block w-full rounded-md border-gray-300 pl-7 pr-12 focus:border-orange-500 focus:ring-orange-500 text-lg"
+                                                                        placeholder="0.00"
+                                                                    />
                                                                 </div>
-                                                                <div>
-                                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                                        Change
-                                                                    </label>
-                                                                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                                                                        <p className="text-3xl font-bold text-gray-900">
-                                                                            ${change.toFixed(2)}
-                                                                        </p>
-                                                                    </div>
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                                    Change
+                                                                </label>
+                                                                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                                                    <p className="text-3xl font-bold text-gray-900">
+                                                                        {formatCurrency(change)}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -492,20 +449,29 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
 
                                     {/* Footer */}
                                     <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                                        <div className="flex justify-end gap-3">
-                                            <Button
-                                                variant="secondary"
-                                                onClick={onClose}
-                                            >
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                variant="primary"
-                                                onClick={handlePayment}
-                                                disabled={!selectedPaymentMethod || (selectedPaymentMethod === 'cash' && !amountReceived)}
-                                            >
-                                                Complete Payment
-                                            </Button>
+                                        <div className="flex justify-between items-center">
+                                            <div className="text-sm text-gray-500">
+                                                {splitCount > 1 ? (
+                                                    <p>Total payment: {formatCurrency(calculateTotal())} ({splitCount} x {formatCurrency(calculatePerPersonAmount())})</p>
+                                                ) : (
+                                                    <p>Total payment: {formatCurrency(calculateTotal())}</p>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-3">
+                                                <Button
+                                                    variant="secondary"
+                                                    onClick={onClose}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    variant="primary"
+                                                    onClick={handlePayment}
+                                                    disabled={!selectedPaymentMethod || (selectedPaymentMethod === 'cash' && !amountReceived)}
+                                                >
+                                                    Complete Payment
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -712,6 +678,14 @@ function OrderDetailsModal({ isOpen, onClose, order }) {
         </AnimatePresence>
     );
 }
+
+// Helper function to format currency
+const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    }).format(amount);
+};
 
 export default function Checkout() {
     const [orders, setOrders] = useState([]);

@@ -71,6 +71,7 @@ export default function StaffManagement() {
         salary: '',
         timing: '',
         profilePicture: null,
+        currentProfilePicture: null
     });
 
     // Fetch staff list
@@ -169,6 +170,7 @@ export default function StaffManagement() {
             if (missingFields.length > 0) {
                 console.log('Missing fields:', missingFields);
                 toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
+                setIsLoading(false);
                 return;
             }
 
@@ -176,10 +178,24 @@ export default function StaffManagement() {
 
             // Append all form data
             Object.keys(formData).forEach(key => {
+                // Skip empty password on edit
+                if (key === 'password' && isEditing && !formData[key]) return;
+
+                // Skip these fields
+                if (['currentProfilePicture'].includes(key)) return;
+
+                // Handle profile picture
+                if (key === 'profilePicture') {
+                    if (formData[key] instanceof File) {
+                        formDataToSend.append('profilePicture', formData[key]);
+                    }
+                    return;
+                }
+
+                // Handle numeric fields
                 if (key === 'age' || key === 'salary') {
-                    // Convert to numbers
                     formDataToSend.append(key, Number(formData[key]));
-                } else if (formData[key] !== null) {
+                } else if (formData[key] !== null && formData[key] !== undefined) {
                     formDataToSend.append(key, formData[key]);
                 }
             });
@@ -207,7 +223,8 @@ export default function StaffManagement() {
                 age: '',
                 salary: '',
                 timing: '',
-                profilePicture: null
+                profilePicture: null,
+                currentProfilePicture: null
             });
             setIsEditing(false);
             setEditingStaff(null);
@@ -311,7 +328,9 @@ export default function StaffManagement() {
             age: staff.age,
             salary: staff.salary,
             timing: staff.timing,
-            profilePicture: null
+            password: '', // Leave password empty for editing
+            profilePicture: null, // Will be shown in preview but not set in form data
+            currentProfilePicture: staff.profilePicture // Store current profile picture URL
         });
         setIsEditing(true);
         setShowAddStaff(true);
@@ -435,6 +454,16 @@ export default function StaffManagement() {
         } catch (error) {
             handleApiError(error);
         }
+    };
+
+    // Update the profile picture preview section in the form
+    const renderProfilePicturePreview = () => {
+        if (formData.profilePicture) {
+            return URL.createObjectURL(formData.profilePicture);
+        } else if (formData.currentProfilePicture) {
+            return `${import.meta.env.VITE_API_URL}/staff/${formData.currentProfilePicture}`;
+        }
+        return null;
     };
 
     return (
@@ -740,9 +769,9 @@ export default function StaffManagement() {
                                                     {/* Profile Photo Upload */}
                                                     <div className="flex flex-col items-center space-y-3">
                                                         <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300">
-                                                            {formData.profilePicture ? (
+                                                            {renderProfilePicturePreview() ? (
                                                                 <img
-                                                                    src={URL.createObjectURL(formData.profilePicture)}
+                                                                    src={renderProfilePicturePreview()}
                                                                     alt="Preview"
                                                                     className="h-full w-full object-cover"
                                                                 />
@@ -753,7 +782,7 @@ export default function StaffManagement() {
                                                         <label className="cursor-pointer">
                                                             <span className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-orange-700 bg-orange-50 rounded-full hover:bg-orange-100 transition-colors">
                                                                 <PlusIcon className="h-4 w-4" />
-                                                                Upload Photo
+                                                                {isEditing ? 'Change Photo' : 'Upload Photo'}
                                                             </span>
                                                             <input
                                                                 type="file"
@@ -833,11 +862,11 @@ export default function StaffManagement() {
                                                         <div className="col-span-2">
                                                             <Input
                                                                 type="password"
-                                                                label="Password"
+                                                                label={isEditing ? "New Password (leave empty to keep current)" : "Password"}
                                                                 name="password"
                                                                 value={formData.password}
                                                                 onChange={handleInputChange}
-                                                                required
+                                                                required={!isEditing}
                                                                 minLength={6}
                                                             />
                                                         </div>

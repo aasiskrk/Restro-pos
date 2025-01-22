@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import BackButton from '../components/common/BackButton';
 import logo from '../assets/frame.svg';
+import loginIllustration from '../assets/login.svg';
 import { loginApi } from '../apis/api';
 import { toast } from 'react-toastify';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
@@ -136,11 +137,12 @@ export default function Login() {
     return (
         <div className="min-h-screen bg-orange-600 flex">
             {/* Left side with illustration */}
-            <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
+            <div className="hidden lg:flex lg:w-1/2 lg:items-center lg:justify-center p-12">
                 <img
-                    src="https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg"
-                    alt="Restaurant staff working"
-                    className="max-w-md w-full rounded-2xl object-cover shadow-2xl"
+                    src={loginIllustration}
+                    alt="Login illustration"
+                    className="w-full max-w-lg transform hover:scale-105 transition-transform duration-300"
+                    style={{ filter: 'drop-shadow(0 20px 13px rgb(0 0 0 / 0.15))' }}
                 />
             </div>
 

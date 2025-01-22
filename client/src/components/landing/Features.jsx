@@ -14,43 +14,31 @@ const features = [
         name: 'Smart POS System',
         description: 'Intuitive point-of-sale interface with quick order processing and customizable menu management.',
         icon: ShoppingCartIcon,
-        color: 'bg-rose-50 text-rose-600',
-        bgImage: 'https://images.pexels.com/photos/1194713/pexels-photo-1194713.jpeg'
     },
     {
         name: 'Real-time Analytics',
         description: 'Track sales, inventory, and staff performance with detailed reports and actionable insights.',
         icon: ChartBarIcon,
-        color: 'bg-blue-50 text-blue-600',
-        bgImage: 'https://images.pexels.com/photos/7947452/pexels-photo-7947452.jpeg'
     },
     {
         name: 'Order Management',
         description: 'Streamline kitchen operations with real-time order tracking and status updates.',
         icon: ServerStackIcon,
-        color: 'bg-purple-50 text-purple-600',
-        bgImage: 'https://images.pexels.com/photos/1194713/pexels-photo-1194713.jpeg'
     },
     {
         name: 'Time-Saving Automation',
         description: 'Automate routine tasks like inventory tracking, staff scheduling, and report generation.',
         icon: ClockIcon,
-        color: 'bg-green-50 text-green-600',
-        bgImage: 'https://images.pexels.com/photos/7947452/pexels-photo-7947452.jpeg'
     },
     {
         name: 'Payment Integration',
         description: 'Seamlessly handle multiple payment methods including cards, mobile payments, and digital wallets.',
         icon: CurrencyDollarIcon,
-        color: 'bg-amber-50 text-amber-600',
-        bgImage: 'https://images.pexels.com/photos/1194713/pexels-photo-1194713.jpeg'
     },
     {
         name: 'Mobile Ordering',
         description: 'Enable customers to place orders directly from their phones with our integrated mobile ordering system.',
         icon: DevicePhoneMobileIcon,
-        color: 'bg-indigo-50 text-indigo-600',
-        bgImage: 'https://images.pexels.com/photos/7947452/pexels-photo-7947452.jpeg'
     }
 ];
 
@@ -213,27 +201,18 @@ export default function Features() {
                                 key={feature.name}
                                 variants={itemVariants}
                                 whileHover={{
-                                    scale: 1.02,
+                                    y: -4,
                                     transition: { duration: 0.2 }
                                 }}
-                                className="relative flex flex-col rounded-2xl bg-white/90 backdrop-blur-sm p-6 shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden ring-1 ring-black/[0.08]"
+                                className="relative flex flex-col rounded-2xl bg-white p-6 shadow-lg transition-all duration-300 ring-1 ring-black/[0.08] hover:shadow-xl"
                             >
-                                <div
-                                    className="absolute inset-0 opacity-[0.07] group-hover:opacity-[0.10] transition-opacity duration-300"
-                                    style={{
-                                        backgroundImage: `url(${feature.bgImage})`,
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center',
-                                    }}
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-transparent to-orange-50/20"></div>
-                                <dt className="flex items-center gap-x-3 relative">
-                                    <div className={`rounded-lg ${feature.color} p-2.5 ring-1 ring-inset ring-black/[0.08] group-hover:scale-110 transition-transform duration-300 relative shadow-md`}>
-                                        <feature.icon className="h-5 w-5" aria-hidden="true" />
+                                <dt className="flex items-center gap-x-3">
+                                    <div className="rounded-lg bg-gradient-to-br from-orange-100 to-orange-50 p-2.5 ring-1 ring-black/[0.08] shadow-md group-hover:scale-110 transition-transform duration-300">
+                                        <feature.icon className="h-5 w-5 text-orange-600" aria-hidden="true" />
                                     </div>
                                     <CardTitle>{feature.name}</CardTitle>
                                 </dt>
-                                <dd className="mt-4 flex flex-auto flex-col relative">
+                                <dd className="mt-4 flex flex-auto flex-col">
                                     <BodyText className="flex-auto text-sm">
                                         {feature.description}
                                     </BodyText>

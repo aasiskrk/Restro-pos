@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { Dialog, Transition } from '@headlessui/react';
 import {
     UserIcon,
     Cog6ToothIcon,
@@ -12,8 +13,11 @@ import {
     ClockIcon,
     CurrencyDollarIcon,
     BriefcaseIcon,
+    UserCircleIcon,
+    XMarkIcon,
+    CameraIcon,
 } from '@heroicons/react/24/outline';
-import { getCurrentUserApi, updateProfileApi, changePasswordApi, logout } from '../apis/api';
+import { getCurrentUserApi, updateProfileApi, changePasswordApi, adminChangePasswordApi, updateProfilePictureApi, logout } from '../apis/api';
 
 const profileNavigation = [
     { name: 'Profile', icon: UserIcon, href: '/profile' },
@@ -27,6 +31,7 @@ export default function Profile() {
     const [loading, setLoading] = useState(true);
     const [changePasswordMode, setChangePasswordMode] = useState(false);
     const [isStaff, setIsStaff] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const location = useLocation();
 
     const [formData, setFormData] = useState({
@@ -35,6 +40,7 @@ export default function Profile() {
         phone: '',
         location: '',
         role: '',
+        profilePicture: '',
         // Staff specific fields
         age: '',
         salary: '',
@@ -46,6 +52,8 @@ export default function Profile() {
         newPassword: '',
         confirmPassword: '',
     });
+
+    const fileInputRef = useRef(null);
 
     // Fetch user data
     useEffect(() => {
@@ -85,12 +93,21 @@ export default function Profile() {
             console.log('Is staff user:', userIsStaff);
             setIsStaff(userIsStaff);
 
+            // Handle profile picture URL
+            let profilePicture = userData.profilePicture || userData.image || userData.profileImage || userData.avatar;
+            if (profilePicture && !profilePicture.startsWith('http')) {
+                profilePicture = userIsStaff
+                    ? `http://localhost:5000/staff/${profilePicture}`
+                    : `http://localhost:5000${profilePicture}`;
+            }
+
             setFormData({
                 fullName: userData.fullName || '',
                 email: userData.email || '',
                 phone: userData.phone || '',
                 location: userData.location || '',
                 role: userData.role || '',
+                profilePicture: profilePicture || '',
                 // Set staff specific fields if available
                 age: userData.age || '',
                 salary: userData.salary || '',
@@ -162,6 +179,36 @@ export default function Profile() {
         }
     };
 
+    const handleProfilePictureUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+        if (!validTypes.includes(file.type)) {
+            toast.error('Please upload a valid image file (JPEG, PNG)');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image size should be less than 5MB');
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('profilePicture', file);
+
+            await updateProfilePictureApi(formData, isStaff);
+            toast.success('Profile picture updated successfully');
+            fetchUserData(); // Refresh user data to get new profile picture
+        } catch (error) {
+            console.error('Error updating profile picture:', error);
+            toast.error('Failed to update profile picture');
+        }
+    };
+
     const handleChangePassword = async () => {
         try {
             if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -169,22 +216,31 @@ export default function Profile() {
                 return;
             }
 
-            await changePasswordApi({
+            setIsSubmitting(true);
+            // Use different API endpoint based on user type
+            const changePasswordFunction = isStaff ? changePasswordApi : adminChangePasswordApi;
+            await changePasswordFunction({
                 currentPassword: passwordData.currentPassword,
                 newPassword: passwordData.newPassword,
             });
 
             setChangePasswordMode(false);
-            setPasswordData({
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: '',
-            });
+            resetPasswordFields();
             toast.success('Password changed successfully');
         } catch (error) {
             console.error('Error changing password:', error);
             toast.error(error.response?.data?.message || 'Failed to change password');
+        } finally {
+            setIsSubmitting(false);
         }
+    };
+
+    const resetPasswordFields = () => {
+        setPasswordData({
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: '',
+        });
     };
 
     const handleLogout = () => {
@@ -204,6 +260,128 @@ export default function Profile() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            {/* Change Password Modal */}
+            <Transition.Root show={changePasswordMode} as={Fragment}>
+                <Dialog
+                    as="div"
+                    className="relative z-50"
+                    onClose={() => {
+                        setChangePasswordMode(false);
+                        resetPasswordFields();
+                    }}
+                >
+                    <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 z-10 overflow-y-auto">
+                        <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                                enterTo="opacity-100 translate-y-0 sm:scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                                leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                            >
+                                <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                                    <div className="absolute right-0 top-0 pr-4 pt-4">
+                                        <button
+                                            type="button"
+                                            className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+                                            onClick={() => {
+                                                setChangePasswordMode(false);
+                                                resetPasswordFields();
+                                            }}
+                                        >
+                                            <span className="sr-only">Close</span>
+                                            <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                                        </button>
+                                    </div>
+                                    <div className="sm:flex sm:items-start">
+                                        <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                                            <Dialog.Title as="h3" className="text-lg font-semibold leading-6 text-gray-900">
+                                                Change Password
+                                            </Dialog.Title>
+                                            <p className="mt-2 text-sm text-gray-500">
+                                                Ensure your account is using a secure password
+                                            </p>
+                                            <div className="mt-6 space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                                        Current Password
+                                                    </label>
+                                                    <input
+                                                        type="password"
+                                                        name="currentPassword"
+                                                        value={passwordData.currentPassword}
+                                                        onChange={handlePasswordInputChange}
+                                                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                                        New Password
+                                                    </label>
+                                                    <input
+                                                        type="password"
+                                                        name="newPassword"
+                                                        value={passwordData.newPassword}
+                                                        onChange={handlePasswordInputChange}
+                                                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                                        Confirm New Password
+                                                    </label>
+                                                    <input
+                                                        type="password"
+                                                        name="confirmPassword"
+                                                        value={passwordData.confirmPassword}
+                                                        onChange={handlePasswordInputChange}
+                                                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-8 sm:mt-6 sm:flex sm:flex-row-reverse gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={handleChangePassword}
+                                            disabled={isSubmitting}
+                                            className="inline-flex w-full justify-center rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
+                                        >
+                                            {isSubmitting ? 'Changing...' : 'Change Password'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setChangePasswordMode(false);
+                                                resetPasswordFields();
+                                            }}
+                                            className="mt-3 inline-flex w-full justify-center rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition.Root>
+
             <div className="flex">
                 {/* Sidebar */}
                 <div className="w-64 bg-white border-r border-gray-200 min-h-screen">
@@ -232,7 +410,7 @@ export default function Profile() {
                                         ) : (
                                             <a
                                                 href={item.href}
-                                                className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg ${item.name === 'Profile'
+                                                className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg ${location.pathname === item.href
                                                     ? 'bg-orange-50 text-orange-600'
                                                     : 'text-gray-700 hover:bg-gray-50'
                                                     }`}
@@ -250,48 +428,89 @@ export default function Profile() {
 
                 {/* Main Content */}
                 <div className="flex-1 p-8">
-                    <div className="max-w-3xl mx-auto">
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-4">
-                                <div className="h-16 w-16 rounded-full bg-orange-100 flex items-center justify-center">
-                                    <UserIcon className="h-8 w-8 text-orange-600" />
+                    <div className="max-w-3xl mx-auto space-y-6">
+                        {/* Header Card */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-6">
+                                    <div className="relative group">
+                                        <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-100 ring-4 ring-white shadow-lg">
+                                            {formData.profilePicture ? (
+                                                <img
+                                                    className="h-full w-full object-cover"
+                                                    src={formData.profilePicture}
+                                                    alt={formData.fullName}
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.parentElement.innerHTML = '<div class="flex h-full w-full items-center justify-center"><svg class="h-14 w-14 text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg></div>';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="flex h-full w-full items-center justify-center">
+                                                    <UserCircleIcon className="h-14 w-14 text-gray-400" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                        >
+                                            <CameraIcon className="h-5 w-5 text-gray-600" />
+                                        </button>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/jpeg,image/png,image/jpg"
+                                            onChange={handleProfilePictureUpload}
+                                        />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-semibold text-gray-900 mb-1">{formData.fullName}</h1>
+                                        <p className="text-sm text-gray-500 mb-3">{formData.email}</p>
+                                        <div className="flex items-center gap-2 text-orange-600 bg-orange-50 w-fit px-3 py-1.5 rounded-lg">
+                                            <UserIcon className="h-4 w-4" />
+                                            <span className="text-sm font-medium capitalize">{formData.role}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h1 className="text-2xl font-semibold text-gray-900">{formData.fullName}</h1>
-                                    <p className="text-sm text-gray-500">{formData.email}</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <button
-                                    onClick={() => setChangePasswordMode(!changePasswordMode)}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 font-medium"
-                                >
-                                    <KeyIcon className="h-4 w-4" />
-                                    Change Password
-                                </button>
-                                {!isStaff && (
+                                <div className="flex flex-col gap-3">
                                     <button
-                                        onClick={() => editMode ? handleSave() : setEditMode(true)}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 font-medium"
+                                        onClick={() => setChangePasswordMode(!changePasswordMode)}
+                                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 font-medium transition-colors duration-200"
                                     >
-                                        {editMode ? 'Save Changes' : (
-                                            <>
-                                                <PencilIcon className="h-4 w-4" />
-                                                Edit Profile
-                                            </>
-                                        )}
+                                        <KeyIcon className="h-4 w-4" />
+                                        Change Password
                                     </button>
-                                )}
+                                    {!isStaff && (
+                                        <button
+                                            onClick={() => editMode ? handleSave() : setEditMode(true)}
+                                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 font-medium transition-colors duration-200"
+                                        >
+                                            {editMode ? (
+                                                <>Save Changes</>
+                                            ) : (
+                                                <>
+                                                    <PencilIcon className="h-4 w-4" />
+                                                    Edit Profile
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         {/* Personal Information */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                            <h2 className="text-lg font-medium text-gray-900 mb-6">Personal Information</h2>
-                            <div className="grid grid-cols-2 gap-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                            <div className="flex items-center justify-between mb-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">
+                                    <h2 className="text-lg font-medium text-gray-900">Personal Information</h2>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-8">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                         Full Name
                                     </label>
                                     <input
@@ -300,11 +519,11 @@ export default function Profile() {
                                         value={formData.fullName}
                                         onChange={handleInputChange}
                                         disabled={!editMode || isStaff}
-                                        className={inputClasses}
+                                        className={`block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm ${!editMode || isStaff ? 'bg-gray-50' : ''}`}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                         Email
                                     </label>
                                     <input
@@ -313,13 +532,13 @@ export default function Profile() {
                                         value={formData.email}
                                         onChange={handleInputChange}
                                         disabled={true}
-                                        className={inputClasses}
+                                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm bg-gray-50"
                                     />
                                 </div>
                                 {!isStaff && (
                                     <>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                                 Phone
                                             </label>
                                             <input
@@ -328,11 +547,11 @@ export default function Profile() {
                                                 value={formData.phone}
                                                 onChange={handleInputChange}
                                                 disabled={!editMode}
-                                                className={inputClasses}
+                                                className={`block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm ${!editMode ? 'bg-gray-50' : ''}`}
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                                 Location
                                             </label>
                                             <input
@@ -341,7 +560,7 @@ export default function Profile() {
                                                 value={formData.location}
                                                 onChange={handleInputChange}
                                                 disabled={!editMode}
-                                                className={inputClasses}
+                                                className={`block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm ${!editMode ? 'bg-gray-50' : ''}`}
                                             />
                                         </div>
                                     </>
@@ -351,130 +570,49 @@ export default function Profile() {
 
                         {/* Staff Information (only for staff users) */}
                         {isStaff && (
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                                <h2 className="text-lg font-medium text-gray-900 mb-6">Staff Information</h2>
-                                <div className="grid grid-cols-2 gap-6">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                                <div className="mb-6">
+                                    <h2 className="text-lg font-medium text-gray-900">Staff Information</h2>
+                                    <p className="text-sm text-gray-500 mt-1">Your employment details and work information</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-8">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                             Age
                                         </label>
-                                        <div className="mt-1 flex items-center">
+                                        <div className="mt-1 flex items-center rounded-lg bg-gray-50 px-4 py-3">
                                             <span className="text-gray-900">{formData.age}</span>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                             Salary
                                         </label>
-                                        <div className="mt-1 flex items-center">
+                                        <div className="mt-1 flex items-center rounded-lg bg-gray-50 px-4 py-3">
                                             <CurrencyDollarIcon className="h-5 w-5 text-gray-400 mr-2" />
                                             <span className="text-gray-900">{formData.salary}</span>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                             Work Timing
                                         </label>
-                                        <div className="mt-1 flex items-center">
+                                        <div className="mt-1 flex items-center rounded-lg bg-gray-50 px-4 py-3">
                                             <ClockIcon className="h-5 w-5 text-gray-400 mr-2" />
                                             <span className="text-gray-900">{formData.timing}</span>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                             Department
                                         </label>
-                                        <div className="mt-1 flex items-center">
+                                        <div className="mt-1 flex items-center rounded-lg bg-gray-50 px-4 py-3">
                                             <BriefcaseIcon className="h-5 w-5 text-gray-400 mr-2" />
                                             <span className="text-gray-900 capitalize">{formData.role}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        )}
-
-                        {/* Role Information */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                            <h2 className="text-lg font-medium text-gray-900 mb-6">Role Information</h2>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Role
-                                </label>
-                                <div className="flex items-center gap-2 text-orange-600 bg-orange-50 w-fit px-3 py-1.5 rounded-lg">
-                                    <UserIcon className="h-4 w-4" />
-                                    <span className="text-sm font-medium capitalize">{formData.role}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Change Password */}
-                        {changePasswordMode && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-                            >
-                                <h2 className="text-lg font-medium text-gray-900 mb-6">Change Password</h2>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Current Password
-                                        </label>
-                                        <input
-                                            type="password"
-                                            name="currentPassword"
-                                            value={passwordData.currentPassword}
-                                            onChange={handlePasswordInputChange}
-                                            className={inputClasses}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            New Password
-                                        </label>
-                                        <input
-                                            type="password"
-                                            name="newPassword"
-                                            value={passwordData.newPassword}
-                                            onChange={handlePasswordInputChange}
-                                            className={inputClasses}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Confirm New Password
-                                        </label>
-                                        <input
-                                            type="password"
-                                            name="confirmPassword"
-                                            value={passwordData.confirmPassword}
-                                            onChange={handlePasswordInputChange}
-                                            className={inputClasses}
-                                        />
-                                    </div>
-                                    <div className="flex justify-end gap-4">
-                                        <button
-                                            onClick={() => {
-                                                setChangePasswordMode(false);
-                                                setPasswordData({
-                                                    currentPassword: '',
-                                                    newPassword: '',
-                                                    confirmPassword: '',
-                                                });
-                                            }}
-                                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={handleChangePassword}
-                                            className="px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg"
-                                        >
-                                            Change Password
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
                         )}
                     </div>
                 </div>
