@@ -89,30 +89,23 @@ export default function Profile() {
             console.log('User data received:', userData);
 
             // Check if user is staff based on the data structure
-            const userIsStaff = userData.hasOwnProperty('age') && userData.hasOwnProperty('salary');
+            const userIsStaff = userData.role === 'server' || userData.role === 'kitchen' || userData.role === 'cashier';
             console.log('Is staff user:', userIsStaff);
             setIsStaff(userIsStaff);
 
             // Handle profile picture URL
-            let profilePicture = userData.profilePicture || userData.image || userData.profileImage || userData.avatar;
+            let profilePicture = userData.profilePicture;
             if (profilePicture && !profilePicture.startsWith('http')) {
-                profilePicture = userIsStaff
-                    ? `http://localhost:5000/staff/${profilePicture}`
-                    : `http://localhost:5000${profilePicture}`;
+                // Use a consistent base URL for development
+                profilePicture = `http://localhost:5000${profilePicture}`;
             }
+            console.log('Profile picture URL:', profilePicture);
 
             setFormData({
-                fullName: userData.fullName || '',
-                email: userData.email || '',
-                phone: userData.phone || '',
-                location: userData.location || '',
-                role: userData.role || '',
-                profilePicture: profilePicture || '',
-                // Set staff specific fields if available
-                age: userData.age || '',
-                salary: userData.salary || '',
-                timing: userData.timing || '',
+                ...userData,
+                profilePicture,
             });
+            
             console.log('Form data set:', formData);
             setLoading(false);
         } catch (error) {
@@ -200,12 +193,32 @@ export default function Profile() {
             const formData = new FormData();
             formData.append('profilePicture', file);
 
-            await updateProfilePictureApi(formData, isStaff);
-            toast.success('Profile picture updated successfully');
-            fetchUserData(); // Refresh user data to get new profile picture
+            const response = await updateProfilePictureApi(formData, isStaff);
+            console.log('Profile picture update response:', response);
+            
+            if (response.data?.data?.profilePicture) {
+                // Update localStorage with new profile picture URL
+                const savedUser = localStorage.getItem('user');
+                if (savedUser) {
+                    const userData = JSON.parse(savedUser);
+                    const profilePicture = response.data.data.profilePicture;
+                    
+                    // Store the relative path in localStorage
+                    userData.profilePicture = profilePicture;
+                    localStorage.setItem('user', JSON.stringify(userData));
+                    
+                    // Trigger storage event manually since we're in the same window
+                    window.dispatchEvent(new Event('storage'));
+                }
+
+                toast.success('Profile picture updated successfully');
+                fetchUserData(); // Refresh user data to get new profile picture
+            } else {
+                throw new Error('Invalid response format');
+            }
         } catch (error) {
             console.error('Error updating profile picture:', error);
-            toast.error('Failed to update profile picture');
+            toast.error(error.response?.data?.message || 'Failed to update profile picture');
         }
     };
 
@@ -217,9 +230,8 @@ export default function Profile() {
             }
 
             setIsSubmitting(true);
-            // Use different API endpoint based on user type
-            const changePasswordFunction = isStaff ? changePasswordApi : adminChangePasswordApi;
-            await changePasswordFunction({
+            // Use the same API endpoint for both admin and staff
+            await changePasswordApi({
                 currentPassword: passwordData.currentPassword,
                 newPassword: passwordData.newPassword,
             });

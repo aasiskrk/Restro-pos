@@ -49,10 +49,8 @@ export const registerApi = (data) => Api.post("/auth/register", data);
 export const loginApi = (data) => Api.post("/auth/login", data);
 export const getCurrentUserApi = () => Api.get("/auth/me");
 export const updateProfileApi = (data) => Api.put("/auth/update-profile", data);
-export const changePasswordApi = (data) =>
-  Api.put("/auth/change-password", data);
-export const adminChangePasswordApi = (data) =>
-  Api.put("/users/change-password", data);
+export const changePasswordApi = (data) => Api.put("/auth/change-password", data);
+export const adminChangePasswordApi = (data) => Api.put("/auth/change-password", data);
 export const updateProfilePictureApi = (formData, isStaff = false) => {
   const endpoint = isStaff
     ? "/staff/update-profile-picture"

@@ -38,7 +38,7 @@ export default function Header({ onToggleSidebar }) {
 
                     // If profile picture exists, ensure it has the full URL
                     const fullProfilePic = profilePic ?
-                        (profilePic.startsWith('http') ? profilePic : `http://localhost:5000/staff/${profilePic}`) :
+                        (profilePic.startsWith('http') ? profilePic : `http://localhost:5000${profilePic}`) :
                         null;
 
                     console.log('Staff profile picture:', fullProfilePic); // Debug log
@@ -64,6 +64,51 @@ export default function Header({ onToggleSidebar }) {
             return null;
         }
     });
+
+    // Add effect to update user when localStorage changes
+    useEffect(() => {
+        const handleStorageChange = () => {
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) {
+                const parsedUser = JSON.parse(savedUser);
+                console.log('Storage change - Parsed user data:', parsedUser);
+                
+                // For staff roles (server, kitchen, cashier), the data structure is different
+                if (parsedUser.role !== 'admin') {
+                    // Check all possible profile picture fields
+                    const profilePic = parsedUser.profilePicture ||
+                        parsedUser.image ||
+                        parsedUser.profileImage ||
+                        parsedUser.avatar;
+
+                    // If profile picture exists, ensure it has the full URL
+                    const fullProfilePic = profilePic ?
+                        (profilePic.startsWith('http') ? profilePic : `http://localhost:5000${profilePic}`) :
+                        null;
+
+                    console.log('Storage change - Staff profile picture:', fullProfilePic);
+
+                    setUser({
+                        ...parsedUser,
+                        fullName: parsedUser.fullName || parsedUser.name,
+                        profilePicture: fullProfilePic
+                    });
+                } else {
+                    // For admin, check if profile picture needs full URL
+                    if (parsedUser.profilePicture && !parsedUser.profilePicture.startsWith('http')) {
+                        parsedUser.profilePicture = `http://localhost:5000${parsedUser.profilePicture}`;
+                    }
+                    console.log('Storage change - Admin profile picture:', parsedUser.profilePicture);
+                    setUser(parsedUser);
+                }
+            } else {
+                setUser(null);
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
 
     // Function to get role-specific notifications
     const fetchRoleBasedNotifications = async () => {

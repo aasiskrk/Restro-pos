@@ -192,14 +192,24 @@ function CheckoutModal({ isOpen, onClose, table, onPaymentComplete }) {
 
     const handlePayment = async () => {
         try {
+            const totalAmount = calculateTotal();
+            const receivedAmount = parseFloat(amountReceived);
+
+            // Validate cash payment amount
+            if (selectedPaymentMethod === 'cash') {
+                if (!receivedAmount || receivedAmount < totalAmount) {
+                    toast.error('Received amount must be equal to or greater than the total amount');
+                    return;
+                }
+            }
+
             setPaymentProcessing(true);
             setPaymentError(null);
 
-            const totalAmount = calculateTotal();
             const paymentData = {
                 orderId: table._id,
                 amount: totalAmount,
-                amountReceived: parseFloat(amountReceived),
+                amountReceived: receivedAmount,
                 change: change,
                 paymentStatus: 'paid',
                 splitCount: splitCount,

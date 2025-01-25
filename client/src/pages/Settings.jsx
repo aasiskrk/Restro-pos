@@ -33,13 +33,6 @@ const defaultSettings = {
             type: 'toggle',
             value: true,
             description: 'Notifications for new and updated orders'
-        },
-        {
-            id: 'sound_enabled',
-            label: 'Notification Sound',
-            type: 'toggle',
-            value: true,
-            description: 'Play sound when new notifications arrive'
         }
     ]
 };

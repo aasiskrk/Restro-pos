@@ -14,8 +14,8 @@ exports.createStaff = catchAsync(async (req, res, next) => {
 
     const staffData = {
       ...req.body,
-      admin: req.body.admin, // Default admin ID
-      restaurant: req.body.restaurant, // Default restaurant ID
+      admin: req.body.admin,
+      restaurant: req.body.restaurant,
     };
 
     // Handle profile picture upload
@@ -28,7 +28,7 @@ exports.createStaff = catchAsync(async (req, res, next) => {
       }
 
       // Create upload directory if it doesn't exist
-      const uploadDir = path.join(__dirname, "../public/staff");
+      const uploadDir = path.join(__dirname, "../public/uploads/staff");
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
@@ -38,7 +38,7 @@ exports.createStaff = catchAsync(async (req, res, next) => {
 
       try {
         await profilePic.mv(uploadPath);
-        staffData.profilePicture = imageName;
+        staffData.profilePicture = `/uploads/staff/${imageName}`;
       } catch (error) {
         console.error("Error uploading profile picture:", error);
         return next(new AppError("Error uploading profile picture", 500));
@@ -93,7 +93,7 @@ exports.updateStaff = catchAsync(async (req, res, next) => {
       const salt = await bcrypt.genSalt(10);
       updateData.password = await bcrypt.hash(updateData.password, salt);
     } else {
-      delete updateData.password; // Don't update password if not provided
+      delete updateData.password;
     }
 
     // Handle file upload
@@ -106,10 +106,8 @@ exports.updateStaff = catchAsync(async (req, res, next) => {
       }
 
       // Create unique filename
-      const fileName = `staff-${req.params.id}-${Date.now()}${path.extname(
-        file.name
-      )}`;
-      const uploadDir = path.join(__dirname, "../public/staff");
+      const fileName = `staff-${req.params.id}-${Date.now()}${path.extname(file.name)}`;
+      const uploadDir = path.join(__dirname, "../public/uploads/staff");
       const uploadPath = path.join(uploadDir, fileName);
 
       // Create directory if it doesn't exist
@@ -120,7 +118,7 @@ exports.updateStaff = catchAsync(async (req, res, next) => {
       // Delete old profile picture if exists
       const oldStaff = await Staff.findById(req.params.id);
       if (oldStaff && oldStaff.profilePicture) {
-        const oldPicturePath = path.join(uploadDir, oldStaff.profilePicture);
+        const oldPicturePath = path.join(__dirname, "../public", oldStaff.profilePicture);
         if (fs.existsSync(oldPicturePath)) {
           fs.unlinkSync(oldPicturePath);
         }
@@ -128,7 +126,7 @@ exports.updateStaff = catchAsync(async (req, res, next) => {
 
       // Move the new file
       await file.mv(uploadPath);
-      updateData.profilePicture = fileName;
+      updateData.profilePicture = `/uploads/staff/${fileName}`;
     }
 
     const staff = await Staff.findByIdAndUpdate(req.params.id, updateData, {
@@ -241,7 +239,7 @@ exports.updateAttendanceStatus = catchAsync(async (req, res, next) => {
 });
 
 // Update staff profile picture
-exports.updateStaffProfilePicture = async (req, res) => {
+exports.updateStaffProfilePicture = async (req, res, next) => {
   try {
     if (!req.files || !req.files.profilePicture) {
       return res.status(400).json({
@@ -254,7 +252,7 @@ exports.updateStaffProfilePicture = async (req, res) => {
     const staff = req.user;
 
     // Validate file type
-    if (!file.mimetype.startsWith("image")) {
+    if (!file.mimetype.startsWith("image/")) {
       return res.status(400).json({
         status: "fail",
         message: "Please upload an image file",
@@ -262,25 +260,27 @@ exports.updateStaffProfilePicture = async (req, res) => {
     }
 
     // Create unique filename
-    const fileName = `staff-${staff._id}-${Date.now()}${path.extname(
-      file.name
-    )}`;
-    const uploadPath = path.join(
-      __dirname,
-      "../public/uploads/staff",
-      fileName
-    );
+    const fileName = `staff-${staff._id}-${Date.now()}${path.extname(file.name)}`;
+    const uploadDir = path.join(__dirname, "../public/uploads/staff");
+    const uploadPath = path.join(uploadDir, fileName);
 
     // Create directory if it doesn't exist
-    const uploadDir = path.join(__dirname, "../public/uploads/staff");
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Delete old profile picture if exists
+    if (staff.profilePicture) {
+      const oldPath = path.join(__dirname, "../public", staff.profilePicture);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
     }
 
     // Move file to upload directory
     await file.mv(uploadPath);
 
-    // Update staff profile picture in database
+    // Update staff profile picture in database with consistent URL format
     staff.profilePicture = `/uploads/staff/${fileName}`;
     await staff.save();
 
@@ -292,9 +292,6 @@ exports.updateStaffProfilePicture = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating profile picture:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Error updating profile picture",
-    });
+    return next(new AppError("Error updating profile picture", 500));
   }
 };

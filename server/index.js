@@ -58,6 +58,26 @@ connectDB();
 // Defining the port
 const PORT = process.env.PORT || 5000;
 
+// Create upload directories if they don't exist
+const fs = require("fs");
+const uploadDirs = [
+  path.join(__dirname, "public/uploads/users"),
+  path.join(__dirname, "public/uploads/staff"),
+  path.join(__dirname, "public/menu"),
+  path.join(__dirname, "public/staff")
+];
+
+uploadDirs.forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Serve static files from the public directory
+app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
+app.use("/menu", express.static(path.join(__dirname, "public/menu")));
+app.use("/staff", express.static(path.join(__dirname, "public/staff")));
+
 // Configuring routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
@@ -67,26 +87,6 @@ app.use("/api/order", orderRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/payments", paymentRoutes);
-
-// Serve static files from the public directory
-app.use("/menu", express.static(path.join(__dirname, "public/menu")));
-app.use("/staff", express.static(path.join(__dirname, "public/staff")));
-
-// Create public/menu directory if it doesn't exist
-const fs = require("fs");
-const menuUploadDir = path.join(__dirname, "public/menu");
-const staffUploadDir = path.join(__dirname, "public/staff");
-
-if (!fs.existsSync(menuUploadDir)) {
-  fs.mkdirSync(menuUploadDir, { recursive: true });
-}
-
-if (!fs.existsSync(staffUploadDir)) {
-  fs.mkdirSync(staffUploadDir, { recursive: true });
-}
-
-// Serve static files
-app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {

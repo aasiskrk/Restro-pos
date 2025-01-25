@@ -53,13 +53,6 @@ const defaultNotificationSettings = {
             type: 'toggle',
             value: true,
             description: 'Notifications for new and updated orders'
-        },
-        {
-            id: 'sound_enabled',
-            label: 'Notification Sound',
-            type: 'toggle',
-            value: true,
-            description: 'Play sound when new notifications arrive'
         }
     ]
 };
@@ -75,7 +68,6 @@ export default function Settings() {
         email: '',
         phone: '',
         address: '',
-        logo: null,
         type: '',
         size: ''
     });
@@ -124,7 +116,6 @@ export default function Settings() {
                     email: response.data.restaurant.email || '',
                     phone: response.data.restaurant.phone || '',
                     address: response.data.restaurant.address || '',
-                    logo: response.data.restaurant.logo || null,
                     type: response.data.restaurant.type || '',
                     size: response.data.restaurant.size || ''
                 });
@@ -152,6 +143,7 @@ export default function Settings() {
                 size: restaurantData.size
             };
 
+            console.log('Updating restaurant with data:', updateData);
             const response = await updateRestaurantDetailsApi(updateData);
 
             if (response.data.success) {
@@ -162,8 +154,9 @@ export default function Settings() {
                 toast.error(response.data.message || 'Failed to update restaurant details');
             }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to update restaurant details');
             console.error('Update restaurant details error:', err);
+            console.error('Error response:', err.response?.data);
+            toast.error(err.response?.data?.message || 'Failed to update restaurant details');
         }
     };
 
@@ -247,36 +240,6 @@ export default function Settings() {
                                         <div className="text-center text-red-500 py-8">{error}</div>
                                     ) : (
                                         <>
-                                            {/* Logo Upload */}
-                                            <div className="flex justify-center mb-8">
-                                                <div className="relative">
-                                                    <motion.div
-                                                        whileHover={{ scale: 1.05 }}
-                                                        className="h-32 w-32 rounded-2xl bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300"
-                                                    >
-                                                        {restaurantData.logo ? (
-                                                            <img
-                                                                src={restaurantData.logo}
-                                                                alt="Restaurant logo"
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <BuildingStorefrontIcon className="h-16 w-16 text-gray-400" />
-                                                        )}
-                                                    </motion.div>
-                                                    {isEditing && (
-                                                        <motion.label
-                                                            whileHover={{ scale: 1.1 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            className="absolute -bottom-2 -right-2 p-2 bg-orange-500 rounded-full cursor-pointer hover:bg-orange-600 transition-colors shadow-lg"
-                                                        >
-                                                            <CameraIcon className="h-5 w-5 text-white" />
-                                                            <input type="file" className="hidden" accept="image/*" />
-                                                        </motion.label>
-                                                    )}
-                                                </div>
-                                            </div>
-
                                             {/* Form Fields */}
                                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                                 <Input
@@ -314,7 +277,7 @@ export default function Settings() {
                                                         value={restaurantData.type}
                                                         onChange={(e) => setRestaurantData({ ...restaurantData, type: e.target.value })}
                                                         disabled={!isEditing}
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm disabled:bg-gray-50"
                                                     >
                                                         <option value="">Select Type</option>
                                                         {restaurantTypes.map(type => (
@@ -330,7 +293,7 @@ export default function Settings() {
                                                         value={restaurantData.size}
                                                         onChange={(e) => setRestaurantData({ ...restaurantData, size: e.target.value })}
                                                         disabled={!isEditing}
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm disabled:bg-gray-50"
                                                     >
                                                         <option value="">Select Size</option>
                                                         {restaurantSizes.map(size => (

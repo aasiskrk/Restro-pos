@@ -589,7 +589,7 @@ exports.getRestaurantDetails = async (req, res) => {
 exports.updateRestaurantDetails = async (req, res) => {
   try {
     console.log("Controller - Request Body:", req.body);
-    const { restaurantName, ownerName, email, phone, address } = req.body;
+    const { restaurantName, ownerName, email, phone, address, type, size } = req.body;
 
     // Get user with populated restaurant data
     const user = await User.findById(req.user.id).populate("restaurant");
@@ -626,6 +626,8 @@ exports.updateRestaurantDetails = async (req, res) => {
     if (email) updateData.email = email;
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
+    if (type) updateData.type = type;
+    if (size) updateData.size = size;
     updateData.updatedAt = Date.now();
 
     console.log("Controller - Update Data:", updateData);
@@ -689,10 +691,18 @@ exports.updateProfilePicture = async (req, res) => {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
+    // Delete old profile picture if exists
+    if (user.profilePicture) {
+      const oldPath = path.join(__dirname, "../public", user.profilePicture);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
     // Move file to upload directory
     await file.mv(uploadPath);
 
-    // Update user profile picture in database
+    // Update user profile picture in database with consistent URL format
     user.profilePicture = `/uploads/users/${fileName}`;
     await user.save();
 
