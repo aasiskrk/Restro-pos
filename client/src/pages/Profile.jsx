@@ -16,6 +16,9 @@ import {
     UserCircleIcon,
     XMarkIcon,
     CameraIcon,
+    ShieldCheckIcon,
+    UserGroupIcon,
+    ComputerDesktopIcon,
 } from '@heroicons/react/24/outline';
 import { getCurrentUserApi, updateProfileApi, changePasswordApi, adminChangePasswordApi, updateProfilePictureApi, logout } from '../apis/api';
 
@@ -24,6 +27,21 @@ const profileNavigation = [
     { name: 'Settings', icon: Cog6ToothIcon, href: '/profile/settings' },
     { name: 'Logout', icon: ArrowRightOnRectangleIcon, href: '/logout' },
 ];
+
+const getRoleIcon = (role) => {
+    switch (role?.toLowerCase()) {
+        case 'admin':
+            return <ShieldCheckIcon className="h-14 w-14 text-orange-600" />;
+        case 'cashier':
+            return <CurrencyDollarIcon className="h-14 w-14 text-orange-600" />;
+        case 'server':
+            return <UserGroupIcon className="h-14 w-14 text-orange-600" />;
+        case 'kitchen':
+            return <ComputerDesktopIcon className="h-14 w-14 text-orange-600" />;
+        default:
+            return <UserIcon className="h-14 w-14 text-orange-600" />;
+    }
+};
 
 export default function Profile() {
     const navigate = useNavigate();
@@ -445,37 +463,8 @@ export default function Profile() {
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-6">
-                                    <div className="relative group">
-                                        <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-100 ring-4 ring-white shadow-lg">
-                                            {formData.profilePicture ? (
-                                                <img
-                                                    className="h-full w-full object-cover"
-                                                    src={formData.profilePicture}
-                                                    alt={formData.fullName}
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        e.target.parentElement.innerHTML = '<div class="flex h-full w-full items-center justify-center"><svg class="h-14 w-14 text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg></div>';
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div className="flex h-full w-full items-center justify-center">
-                                                    <UserCircleIcon className="h-14 w-14 text-gray-400" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                        >
-                                            <CameraIcon className="h-5 w-5 text-gray-600" />
-                                        </button>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            className="hidden"
-                                            accept="image/jpeg,image/png,image/jpg"
-                                            onChange={handleProfilePictureUpload}
-                                        />
+                                    <div className="h-24 w-24 rounded-full overflow-hidden bg-orange-50 flex items-center justify-center ring-4 ring-white shadow-lg">
+                                        {getRoleIcon(formData.role)}
                                     </div>
                                     <div>
                                         <h1 className="text-2xl font-semibold text-gray-900 mb-1">{formData.fullName}</h1>

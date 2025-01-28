@@ -20,6 +20,8 @@ import PaymentHistory from './pages/cashier/PaymentHistory';
 import Profile from './pages/Profile';
 import ProfileSettings from './pages/Settings';
 import AdminSetup from './pages/AdminSetup';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -33,6 +35,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/admin-setup" element={<AdminSetup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<Dashboard />} />

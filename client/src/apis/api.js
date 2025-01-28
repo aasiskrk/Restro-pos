@@ -61,10 +61,8 @@ export const updateProfilePictureApi = (formData, isStaff = false) => {
     },
   });
 };
-export const forgotPasswordApi = (data) =>
-  Api.post("/auth/forgot-password", data);
-export const resetPasswordApi = (data) =>
-  Api.post("/auth/reset-password", data);
+export const forgotPasswordApi = (data) => Api.post("/auth/forgot-password", data);
+export const resetPasswordApi = (data) => Api.post("/auth/reset-password", data);
 
 // Logout function
 export const logout = () => {

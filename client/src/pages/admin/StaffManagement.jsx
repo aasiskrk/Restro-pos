@@ -15,6 +15,14 @@ import {
     Cog6ToothIcon,
     UserCircleIcon,
     ClockIcon,
+    UserIcon,
+    PlusIcon as PlusIconOutline,
+    PencilIcon,
+    ShieldCheckIcon,
+    CurrencyDollarIcon,
+    ServerStackIcon,
+    ComputerDesktopIcon,
+    UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { UsersIcon as UsersIconSolid } from '@heroicons/react/24/solid';
 import { Dialog, Transition } from '@headlessui/react';
@@ -44,6 +52,21 @@ const navigation = [
     { name: 'Orders & Tables', icon: TableCellsIcon, href: '/admin/orders', current: false },
     { name: 'Settings', icon: Cog6ToothIcon, href: '/admin/settings', current: false },
 ];
+
+const getRoleIcon = (role) => {
+    switch (role?.toLowerCase()) {
+        case 'admin':
+            return <ShieldCheckIcon className="h-10 w-10 text-orange-600" />;
+        case 'cashier':
+            return <CurrencyDollarIcon className="h-10 w-10 text-orange-600" />;
+        case 'server':
+            return <UserGroupIcon className="h-10 w-10 text-orange-600" />;
+        case 'kitchen':
+            return <ComputerDesktopIcon className="h-10 w-10 text-orange-600" />;
+        default:
+            return <UserIcon className="h-10 w-10 text-orange-600" />;
+    }
+};
 
 export default function StaffManagement() {
     const [activeTab, setActiveTab] = useState('list');
@@ -548,16 +571,8 @@ export default function StaffManagement() {
                                         <tr key={staff._id}>
                                             <td className="whitespace-nowrap py-4 pl-4 pr-3">
                                                 <div className="flex items-center">
-                                                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden">
-                                                        {staff.profilePicture ? (
-                                                            <img
-                                                                src={`${import.meta.env.VITE_API_URL}/staff/${staff.profilePicture}`}
-                                                                alt={staff.fullName}
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <UserCircleIcon className="h-6 w-6 text-orange-600" />
-                                                        )}
+                                                    <div className="h-10 w-10 rounded-full bg-orange-50 flex items-center justify-center">
+                                                        {getRoleIcon(staff.role)}
                                                     </div>
                                                     <div className="ml-4">
                                                         <div className="font-medium text-gray-900">
@@ -647,16 +662,8 @@ export default function StaffManagement() {
                                                 <tr key={staff._id}>
                                                     <td className="whitespace-nowrap py-4 pl-4 pr-3">
                                                         <div className="flex items-center">
-                                                            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden">
-                                                                {staff.profilePicture ? (
-                                                                    <img
-                                                                        src={`${import.meta.env.VITE_API_URL}/staff/${staff.profilePicture}`}
-                                                                        alt={staff.fullName}
-                                                                        className="h-full w-full object-cover"
-                                                                    />
-                                                                ) : (
-                                                                    <UserCircleIcon className="h-6 w-6 text-orange-600" />
-                                                                )}
+                                                            <div className="h-10 w-10 rounded-full bg-orange-50 flex items-center justify-center">
+                                                                {getRoleIcon(staff.role)}
                                                             </div>
                                                             <div className="ml-4">
                                                                 <div className="font-medium text-gray-900">
@@ -768,29 +775,10 @@ export default function StaffManagement() {
                                                 <div className="space-y-5">
                                                     {/* Profile Photo Upload */}
                                                     <div className="flex flex-col items-center space-y-3">
-                                                        <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300">
-                                                            {renderProfilePicturePreview() ? (
-                                                                <img
-                                                                    src={renderProfilePicturePreview()}
-                                                                    alt="Preview"
-                                                                    className="h-full w-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <UserCircleIcon className="h-16 w-16 text-gray-400" />
-                                                            )}
+                                                        <div className="h-24 w-24 rounded-full bg-orange-50 flex items-center justify-center border-2 border-orange-100">
+                                                            {getRoleIcon(formData.role)}
                                                         </div>
-                                                        <label className="cursor-pointer">
-                                                            <span className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-orange-700 bg-orange-50 rounded-full hover:bg-orange-100 transition-colors">
-                                                                <PlusIcon className="h-4 w-4" />
-                                                                {isEditing ? 'Change Photo' : 'Upload Photo'}
-                                                            </span>
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                className="hidden"
-                                                                onChange={handleFileChange}
-                                                            />
-                                                        </label>
+                                                        <div className="text-sm text-gray-500">Role-based Icon</div>
                                                     </div>
 
                                                     {/* Form Fields */}

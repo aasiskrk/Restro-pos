@@ -7,7 +7,13 @@ import {
     UserCircleIcon,
     Cog6ToothIcon,
     ArrowRightOnRectangleIcon,
-    ChartBarIcon 
+    ChartBarIcon,
+    ShieldCheckIcon,
+    UserIcon,
+    CurrencyDollarIcon,
+    ServerStackIcon,
+    ComputerDesktopIcon,
+    UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { SmallText } from '../common/Typography';
 import logo from '../../assets/frame.svg';
@@ -141,6 +147,21 @@ export default function Header() {
         }
     };
 
+    const getRoleIcon = (role) => {
+        switch (role?.toLowerCase()) {
+            case 'admin':
+                return <ShieldCheckIcon className="h-6 w-6 text-orange-600" />;
+            case 'cashier':
+                return <CurrencyDollarIcon className="h-6 w-6 text-orange-600" />;
+            case 'server':
+                return <UserGroupIcon className="h-6 w-6 text-orange-600" />;
+            case 'kitchen':
+                return <ComputerDesktopIcon className="h-6 w-6 text-orange-600" />;
+            default:
+                return <UserIcon className="h-6 w-6 text-orange-600" />;
+        }
+    };
+
     return (
         <header className="fixed inset-x-0 top-0 z-50 bg-white/100 backdrop-blur-md shadow-sm">
             <nav className="flex items-center justify-between p-6 lg:px-8" aria-label="Global">
@@ -193,22 +214,8 @@ export default function Header() {
                         <Menu as="div" className="relative">
                             <Menu.Button className="flex items-center space-x-3 rounded-full p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100">
                                 <span className="sr-only">Open user menu</span>
-                                <div className="h-8 w-8 rounded-full overflow-hidden">
-                                    {user?.profilePicture ? (
-                                        <img
-                                            className="h-full w-full object-cover"
-                                            src={user.profilePicture}
-                                            alt={user?.fullName}
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.parentElement.innerHTML = '<svg class="h-8 w-8 text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>';
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="flex h-full w-full items-center justify-center bg-gray-100">
-                                            <UserCircleIcon className="h-6 w-6 text-gray-400" />
-                                        </div>
-                                    )}
+                                <div className="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center bg-orange-50">
+                                    {getRoleIcon(user?.role)}
                                 </div>
                                 {user?.fullName && (
                                     <div className="hidden md:flex md:items-center md:space-x-1">

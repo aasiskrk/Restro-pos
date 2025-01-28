@@ -66,11 +66,13 @@ export default function KitchenInterface() {
 
             await updateOrderStatus(orderId, 'completed');
 
-            // Add to completed orders
+            // Remove from active orders first
+            setActiveOrders(prev => prev.filter(order => order._id !== orderId));
+            
+            // Then add to completed orders
             setCompletedOrders(prev => [...prev, { ...orderToComplete, status: 'completed' }]);
 
             toast.success('Order marked as ready');
-            await fetchOrders();
         } catch (error) {
             toast.error('Failed to mark order as ready');
             console.error('Error marking order as ready:', error);
@@ -94,10 +96,19 @@ export default function KitchenInterface() {
         }
     };
 
-    const handleDeliverOrder = (orderId) => {
-        setDeliveredOrders(prev => new Set([...prev, orderId]));
-        setCompletedOrders(prev => prev.filter(order => order._id !== orderId));
-        toast.success('Order marked as delivered');
+    const handleDeliverOrder = async (orderId) => {
+        try {
+            // Remove from completed orders
+            setCompletedOrders(prev => prev.filter(order => order._id !== orderId));
+            
+            // Add to delivered orders set
+            setDeliveredOrders(prev => new Set([...prev, orderId]));
+            
+            toast.success('Order marked as delivered');
+        } catch (error) {
+            toast.error('Failed to mark order as delivered');
+            console.error('Error marking order as delivered:', error);
+        }
     };
 
     const getStatusColor = (status) => {

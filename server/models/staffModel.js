@@ -42,12 +42,12 @@ const staffSchema = new mongoose.Schema(
     admin: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default: "677299c68b74458eff99d36b", // Default admin ID
+      default: "6798868afce9b6961a9a682b", // Default admin ID
     },
     restaurant: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Restaurant",
-      default: "677299bd8b74458eff99d367", // Default restaurant ID
+      default: "67988683fce9b6961a9a6827", // Default restaurant ID
     },
     isActive: {
       type: Boolean,
