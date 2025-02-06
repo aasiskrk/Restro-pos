@@ -402,20 +402,6 @@ export default function StaffManagement() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <div className="flex justify-center">
-                                            <div className="h-32 w-32 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden">
-                                                {staff.profilePicture ? (
-                                                    <img
-                                                        src={`${import.meta.env.VITE_API_URL}/staff/${staff.profilePicture}`}
-                                                        alt={staff.fullName}
-                                                        className="h-full w-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <UserCircleIcon className="h-20 w-20 text-orange-600" />
-                                                )}
-                                            </div>
-                                        </div>
-
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-500">

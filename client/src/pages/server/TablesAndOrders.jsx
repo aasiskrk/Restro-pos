@@ -906,7 +906,7 @@ export default function TablesAndOrders() {
                                                             #{order._id.slice(-6)}
                                                         </span>
                                                         <span className="font-medium">
-                                                            Table {order.table.number}
+                                                            Table {order.table?.number || 'Unknown'}
                                                         </span>
                                                         <span className="text-sm text-gray-500">
                                                             {formatDate(order.createdAt)}
@@ -964,7 +964,7 @@ export default function TablesAndOrders() {
                                                             #{order._id.slice(-6)}
                                                         </span>
                                                         <span className="font-medium">
-                                                            Table {order.table.number}
+                                                            Table {order.table?.number || 'Unknown'}
                                                         </span>
                                                         <span className="text-sm text-gray-500">
                                                             {formatDate(order.createdAt)}

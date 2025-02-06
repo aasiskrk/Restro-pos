@@ -278,7 +278,7 @@ export default function KitchenInterface() {
                                             <div className={`p-2 rounded-lg bg-orange-50 border border-orange-100`}>
                                                 <TableCellsIcon className="h-5 w-5 text-orange-600" />
                                             </div>
-                                            <h3 className="text-lg font-medium text-gray-900">Table {order.table.number}</h3>
+                                            <h3 className="text-lg font-medium text-gray-900">Table {order.table?.number || 'Unknown'}</h3>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
@@ -385,7 +385,7 @@ export default function KitchenInterface() {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <h2 className="text-xl font-semibold text-gray-900">Table {selectedOrder.table.number}</h2>
+                                                <h2 className="text-xl font-semibold text-gray-900">Table {selectedOrder.table?.number || 'Unknown'}</h2>
                                                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
                                                     {getStatusIcon(selectedOrder.status)}
                                                     {selectedOrder.status === 'in-progress' ? 'In Progress' : selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
